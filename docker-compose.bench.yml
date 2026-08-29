@@ -1,0 +1,19 @@
+# Overrides for load testing. Use with the main file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.bench.yml up -d
+#   npm run bench
+#
+# The rate limiter is the whole point of this file. At the normal 300
+# requests per minute, autocannon gets 429s within the first second and every
+# number you measure after that is the limiter, not the app. I found that out
+# the hard way: 26,000 RPS and 100% non-2xx.
+#
+# The pool is bumped too. The default of 10 is right for a small instance, but
+# it becomes the bottleneck long before Postgres does when you point 100
+# connections at a single API process.
+
+services:
+  api:
+    environment:
+      RATE_LIMIT_MAX: '100000000'
+      PG_POOL_MAX: '30'

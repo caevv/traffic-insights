@@ -24,8 +24,14 @@ import type { TrafficFilter } from './traffic.types.ts'
  * The aggregates only depend on the query string, so they're safe to cache. A
  * shared max-age lets a CDN or proxy soak up the repeated dashboard polls that
  * make up most of this traffic. It's the biggest single win going from 5 to 50
- * RPS. With @fastify/etag on top, a client whose cache just went stale gets a
- * 304 with no body and no database query.
+ * RPS.
+ *
+ * One thing worth being clear about: the ETag saves BANDWIDTH, not database
+ * work. @fastify/etag hashes the serialised body in an onSend hook, so a
+ * revalidation still runs the handler and still runs the query. It just skips
+ * sending the body. The benchmark shows this plainly, a 304 is no cheaper for
+ * us than a 200. What actually removes load is max-age, because the client
+ * doesn't send the request at all.
  */
 function setAggregateCacheHeaders(reply: FastifyReply): void {
   reply.header(

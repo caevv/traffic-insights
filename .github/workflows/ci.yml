@@ -1,0 +1,167 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push makes the previous run pointless, so cancel it and free the
+# runner instead of paying for a result nobody will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Turns off the npm update banner, which just adds noise to the logs.
+  NPM_CONFIG_UPDATE_NOTIFIER: false
+
+jobs:
+  quality:
+    name: Format, lint, types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Reads .nvmrc, so CI, Docker and your machine can't drift onto
+          # different Node versions.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Knip (unused files, exports and deps)
+        run: npm run knip --workspace @derq/web
+
+  test-api:
+    name: API tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Same major as docker-compose, so CI tests what we actually ship.
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # Without this the job can start running tests before Postgres is
+        # accepting connections, and fail for no real reason.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Vitest
+        # The tests each create their own throwaway database, so this URL only
+        # needs to point at a server where the user can CREATE DATABASE.
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: npm run test --workspace @derq/api
+
+  test-web:
+    name: Web tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Vitest
+        run: npm run test --workspace @derq/web
+
+      - name: Production build
+        run: npm run build --workspace @derq/web
+
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build only, no push. This catches a broken Dockerfile on the PR that
+      # breaks it, instead of at deploy time when it's someone else's problem.
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  smoke:
+    name: Compose smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # This is the check that a fresh clone actually works. It's the setup
+      # step most likely to be broken, and the one a reviewer hits first.
+      - name: Start the stack
+        run: docker compose up --build -d
+
+      - name: Wait for the API to be healthy
+        run: |
+          for i in $(seq 1 60); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' derq-traffic-api-1 2>/dev/null || echo starting)
+            [ "$status" = "healthy" ] && exit 0
+            sleep 2
+          done
+          echo "API never became healthy"
+          docker compose logs
+          exit 1
+
+      - name: Dashboard is served and the API answers through it
+        run: |
+          set -euo pipefail
+          curl -fsS http://localhost:8080/ | grep -q "<div id=\"root\">"
+          curl -fsS http://localhost:8080/api/v1/traffic/by-country | grep -q countryCode
+          curl -fsS http://localhost:8080/api/v1/traffic/by-vehicle-type | grep -q vehicleType
+
+      - name: Show logs if anything failed
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

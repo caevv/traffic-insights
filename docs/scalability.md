@@ -52,10 +52,27 @@ shows it: 213 rps for a 304 against 250 for a full 200, but 0.15 MB/s against
 0.6. What actually removes load from the server is `max-age`, because then the
 client doesn't send a request at all.
 
+## Reading the table before the tiers
+
+Worth being straight about what those numbers mean, because they don't all
+clear every tier.
+
+At **5 rps** everything is fine, with between 5x and 140x headroom depending
+on the endpoint.
+
+At **50 rps** on a single container, four endpoints clear it and two don't:
+`records` at 24 rps and `by-hour` at 63 rps (which is close enough that a
+p99 of 2.2 seconds makes it a no). That isn't an accident of the measurement,
+it's the reason those two get their own sections below. Both would clear 50
+comfortably behind a cache, and both have a real fix.
+
+At **500 rps** nothing clears it on one container, which is the point of the
+third tier.
+
 ## 5 RPS
 
-What's in the repo now already does this, with room to spare. The slowest
-endpoint measured 24 rps.
+Everything in the repo today handles this, and the foundations matter more
+than the throughput.
 
 At this tier the interesting question isn't throughput, it's whether the
 foundations are the kind you can build on. The ones that matter later:

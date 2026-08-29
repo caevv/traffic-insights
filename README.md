@@ -55,6 +55,11 @@ docker compose down       # stop, keep the data
 docker compose down -v    # stop and delete the data
 ```
 
+If you edit a migration that has already run, the next start will refuse
+with "was modified after it was applied". That's on purpose: the database
+no longer matches the file you're reading. During development,
+`docker compose down -v` and start again.
+
 ---
 
 ## Running it locally without Docker

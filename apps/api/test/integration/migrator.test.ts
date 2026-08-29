@@ -94,6 +94,8 @@ describe('migrator', () => {
   })
 })
 
+const SEED_DAYS = 7
+
 describe('seed', () => {
   let db: TestDatabase
 
@@ -110,19 +112,22 @@ describe('seed', () => {
   })
 
   it('generates a full grid of country x vehicle type x hour', async () => {
-    // Two days keeps this quick and still covers the cross join.
-    const { inserted, total } = await seed(db.pool, { days: 2 })
+    // Seven days, not two. Each row gets a random noise factor between 0.88
+    // and 1.12, so a short window leaves few samples per hour bucket and the
+    // two shape assertions below get flaky. A week is still ~16k rows and
+    // under a second, and it gives the noise enough rows to average out.
+    const { inserted, total } = await seed(db.pool, { days: SEED_DAYS })
 
-    // 16 countries x 6 vehicle types x (2 x 24 + 1) hours. The series
+    // 16 countries x 6 vehicle types x (7 x 24 + 1) hours. The series
     // includes both ends.
-    const expectedRows = 16 * 6 * (2 * 24 + 1)
+    const expectedRows = 16 * 6 * (SEED_DAYS * 24 + 1)
     expect(inserted).toBe(expectedRows)
     expect(total).toBe(expectedRows)
     expect(await isEmpty(db.pool)).toBe(false)
   })
 
   it('inserts nothing when the same window is seeded again', async () => {
-    const { inserted } = await seed(db.pool, { days: 2 })
+    const { inserted } = await seed(db.pool, { days: SEED_DAYS })
 
     // ON CONFLICT is what makes the seed safe to run at container start-up.
     expect(inserted).toBe(0)

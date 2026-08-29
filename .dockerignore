@@ -10,8 +10,8 @@
 
 # Secrets must never end up in an image layer. The runtime gets its config
 # from the environment, not from a file baked into the build.
-.env.local
-.env.*.local
+**/.env.local
+**/.env.*.local
 
 docs
 README.md

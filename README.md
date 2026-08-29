@@ -80,7 +80,10 @@ npm run dev                              # API on :3000, Vite on :5173
 Open http://localhost:5173. The Vite dev server proxies `/api` to the API, so
 the browser sees a single origin and there's no CORS to think about.
 
-If you changed `POSTGRES_PORT`, update `DATABASE_URL` in `.env.dev` to match.
+If 5432 is already taken on your machine, start the stack with
+`POSTGRES_PORT=5433 docker compose up` and set the same port in `DATABASE_URL`
+in `apps/api/.env.dev`. They are one port seen from two sides: what Compose
+publishes, and what the API dials.
 
 ---
 
@@ -174,6 +177,8 @@ so the chart queries run as index-only scans. Verified: 69k rows aggregated in
 ```
 apps/
   api/                     Fastify 5 + node-postgres
+    .env, .env.dev,        the API's config, next to the API
+      .env.prod, .env.example
     src/
       config/env.ts        config, validated at boot
       db/                  pool, migration runner, migrations, seed
@@ -187,6 +192,7 @@ apps/
     test/                  unit + integration, against a real Postgres
 
   web/                     React 19 + Vite + Recharts
+    .env.example           one variable, deliberately unset
     src/
       app/                 shell, providers, design tokens
       features/
@@ -327,24 +333,52 @@ the app, which I found out the hard way. See
 
 ## Configuration
 
-Env files are layered, and each one has a single job:
+Config lives next to the thing that reads it. The API's variables are in
+`apps/api`, the frontend's in `apps/web`, and the repo root has none.
 
-| File           | Committed | What's in it                                     |
-| -------------- | --------- | ------------------------------------------------ |
-| `.env`         | yes       | Non-secret defaults for the Compose network      |
-| `.env.dev`     | yes       | **Only** the values that differ locally          |
-| `.env.prod`    | yes       | Standalone production set for a host's env panel |
-| `.env.local`   | no        | **Secrets only**, nothing else                   |
-| `.env.example` | yes       | Documents every variable                         |
+| File                    | Committed | What's in it                                     |
+| ----------------------- | --------- | ------------------------------------------------ |
+| `apps/api/.env`         | yes       | Non-secret API defaults for the Compose network  |
+| `apps/api/.env.dev`     | yes       | **Only** the API values that differ locally      |
+| `apps/api/.env.prod`    | yes       | Standalone production set for a host's env panel |
+| `apps/api/.env.local`   | no        | **Secrets only**, nothing else                   |
+| `apps/api/.env.example` | yes       | Documents every API variable                     |
+| `apps/web/.env.example` | yes       | The one frontend variable, and why it is unset   |
 
-The live files hold `KEY=value` and nothing else. All the explanation lives in
-[`.env.example`](.env.example), so there's one place to look and no duplicated
+The live files hold `KEY=value` and nothing else. The explanation sits in the
+`.env.example` beside them, so there's one place to look and no duplicated
 comments to fall out of sync.
 
-The Compose stack falls back to a throwaway local password
-(`derq_local_dev`) so a fresh clone works with no setup. Override
-`POSTGRES_PASSWORD` and `DATABASE_URL` in `.env.local` for anything that isn't
-your own machine.
+**The root has no env file.** The `postgres` container's four settings are
+written in [`docker-compose.yml`](docker-compose.yml) with their defaults
+inline, `${POSTGRES_PORT:-5432}` and so on, so a file repeating those same
+values would change nothing. Checked rather than assumed: `docker compose
+config` resolves to the same bytes with and without it. The API doesn't read
+them either way. It reads `DATABASE_URL` and never builds a URL out of parts.
+
+To change one, put it in the shell:
+
+```bash
+POSTGRES_PORT=5433 docker compose up
+```
+
+`.env.local` does **not** work for those four. Compose fills `${...}` from a
+`.env` next to the compose file and from nowhere else, so a password put in
+`.env.local` is ignored without a word, while `DATABASE_URL` in
+`apps/api/.env.local` does take effect. Together that gives you an auth failure
+with nothing on screen to explain it. If you want a file rather than the shell,
+make yourself a root `.env`, which Compose does read.
+
+The frontend has exactly one variable, `VITE_API_URL`, and no env file sets it.
+Its default `/api/v1` is relative, so the browser always talks to the origin it
+loaded the page from: right under the Vite dev proxy, right under nginx in
+Docker, and right in production. Writing it into a file would only repeat the
+default.
+
+The stack falls back to a throwaway local password (`derq_local_dev`) so a
+fresh clone works with no setup. For anything that isn't your own machine,
+change it and the password inside `DATABASE_URL` together. It is one password
+seen from two sides.
 
 ---
 

@@ -10,15 +10,27 @@
 name: derq-traffic
 
 services:
+  # The four POSTGRES_* values below configure this container and nothing
+  # else. The API never reads them, it only reads DATABASE_URL. Each one
+  # carries its default inline, so they need no env file and there is no .env
+  # in the repo root.
+  #
+  # To change one, put it in the shell:
+  #
+  #   POSTGRES_PORT=5433 docker compose up
+  #
+  # Or make yourself a .env next to this file, which is the only file Compose
+  # reads for ${...}. Careful: .env.local does NOT work for these. Compose
+  # never reads it, so a password put there is ignored without a word.
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-derq}
       POSTGRES_USER: ${POSTGRES_USER:-derq}
-      # Throwaway local default so a fresh clone works with no setup. It
-      # matches DATABASE_URL in .env. Override BOTH in .env.local (gitignored)
-      # for anything that isn't your own machine.
+      # Throwaway local default so a fresh clone works with no setup. It has
+      # to match the password inside DATABASE_URL, which the API reads from
+      # apps/api/.env. Change one and you have to change the other.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-derq_local_dev}
       # Fixed collation so ORDER BY on country names is the same on your
       # machine and in CI.
@@ -26,7 +38,8 @@ services:
     ports:
       # Published so `npm run dev:api` on your machine can reach it. Bound to
       # loopback only. Never put a database on 0.0.0.0. Set POSTGRES_PORT if
-      # 5432 is already used on your machine.
+      # 5432 is already used on your machine, and update DATABASE_URL in
+      # apps/api/.env.dev to the same port or the host-side scripts miss it.
       - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       # Postgres 18 wants the mount at /var/lib/postgresql, not at
@@ -55,9 +68,9 @@ services:
       dockerfile: apps/api/Dockerfile
     command: ['node', 'dist/cli/bootstrap.js']
     env_file:
-      - path: .env
+      - path: apps/api/.env
         required: true
-      - path: .env.local
+      - path: apps/api/.env.local
         required: false
     depends_on:
       postgres:
@@ -70,9 +83,9 @@ services:
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     env_file:
-      - path: .env
+      - path: apps/api/.env
         required: true
-      - path: .env.local
+      - path: apps/api/.env.local
         required: false
     ports:
       - '3000:3000'

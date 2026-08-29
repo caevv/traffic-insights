@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Traffic analytics dashboard — React 19 + Vite + Recharts.",
+  "description": "Traffic analytics dashboard. React 19 + Vite + Recharts.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

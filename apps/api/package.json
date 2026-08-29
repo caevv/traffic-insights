@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Traffic analytics API — Fastify 5 + PostgreSQL.",
+  "description": "Traffic analytics API. Fastify 5 + PostgreSQL.",
   "engines": {
     "node": ">=24"
   },

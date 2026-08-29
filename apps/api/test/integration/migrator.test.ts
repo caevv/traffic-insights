@@ -1,3 +1,4 @@
+import pg from 'pg'
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -140,6 +141,35 @@ describe('seed', () => {
 
     // ON CONFLICT is what makes the seed safe to run at container start-up.
     expect(inserted).toBe(0)
+  })
+
+  it('is not killed by the statement_timeout the API pool sets', async () => {
+    // How this broke in CI. The pool sets statement_timeout to 5s, which is
+    // right for a request and wrong for one statement that builds ~207k rows.
+    // It passed locally at ~4.2s and was cancelled on a slower runner. A tiny
+    // timeout here makes that failure deterministic instead of machine-speed
+    // dependent.
+    const strict = new pg.Pool({
+      connectionString: db.url,
+      max: 1,
+      statement_timeout: 50,
+    })
+
+    try {
+      // Proves the timeout really is in force on this pool.
+      await expect(strict.query('SELECT pg_sleep(0.5)')).rejects.toMatchObject({
+        code: '57014',
+      })
+
+      // 30 days is ~69k rows, which takes far longer than 50ms to generate.
+      // One day would finish inside the limit and the test would pass even
+      // with the fix removed, which is exactly the vacuous test to avoid.
+      await expect(seed(strict, { days: 30 })).resolves.toMatchObject({
+        inserted: expect.any(Number),
+      })
+    } finally {
+      await strict.end()
+    }
   })
 
   it('produces data that satisfies every schema constraint', async () => {

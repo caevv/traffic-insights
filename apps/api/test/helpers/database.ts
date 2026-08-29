@@ -11,6 +11,8 @@ registerTypeParsers()
 export type TestDatabase = {
   pool: pg.Pool
   name: string
+  /** Connection string, for tests that need a pool with different settings. */
+  url: string
   /** Drop the database and close every pool this helper opened. */
   destroy: () => Promise<void>
 }
@@ -49,13 +51,15 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
 
   const url = new URL(adminUrl)
   url.pathname = `/${name}`
-  const pool = new Pool({ connectionString: url.toString(), max: 4 })
+  const connectionString = url.toString()
+  const pool = new Pool({ connectionString, max: 4 })
 
   await migrate(pool)
 
   return {
     pool,
     name,
+    url: connectionString,
     destroy: async () => {
       await pool.end()
       const cleanup = new Pool({ connectionString: adminUrl, max: 1 })

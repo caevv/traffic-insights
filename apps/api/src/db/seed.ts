@@ -29,6 +29,13 @@ export async function seed(db: Db, options: SeedOptions): Promise<SeedResult> {
   try {
     await client.query('BEGIN')
 
+    // The pool sets a 5 second statement_timeout. That is right for serving a
+    // request and wrong for a bulk load: this one statement builds ~207k rows
+    // and takes a few seconds on a laptop, longer on a small CI runner, which
+    // is exactly how it first failed. SET LOCAL scopes the relaxed limit to
+    // this transaction, so the API keeps its guard.
+    await client.query("SET LOCAL statement_timeout = '10min'")
+
     if (options.reset) {
       await client.query('TRUNCATE traffic_records RESTART IDENTITY')
     }

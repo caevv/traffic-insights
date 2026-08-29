@@ -99,6 +99,11 @@ export async function migrate(
 
       await client.query('BEGIN')
       try {
+        // Same reasoning as the seed. Building an index or backfilling a
+        // column can easily outlast the 5 second limit the pool sets for
+        // request handling, and a migration killed halfway is the worst
+        // possible outcome. Scoped to this transaction only.
+        await client.query("SET LOCAL statement_timeout = '10min'")
         await client.query(file.sql)
         await client.query(
           'INSERT INTO schema_migrations (version, checksum) VALUES ($1, $2)',

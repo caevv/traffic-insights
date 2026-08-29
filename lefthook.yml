@@ -1,0 +1,11 @@
+pre-commit:
+  piped: true
+  jobs:
+    - name: prettier
+      glob: '*.{ts,tsx,js,jsx,mjs,json,css,md,html,yml,yaml}'
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    - name: eslint
+      glob: '*.{ts,tsx}'
+      run: npx eslint --fix {staged_files}
+      stage_fixed: true

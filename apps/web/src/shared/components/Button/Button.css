@@ -1,0 +1,35 @@
+.shared-button {
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.shared-button:active {
+  transform: translateY(1px);
+}
+
+.shared-button--primary {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.shared-button--primary:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.shared-button--secondary {
+  background: transparent;
+  color: var(--text-h);
+  border-color: var(--border);
+}
+
+.shared-button--secondary:hover {
+  background: var(--code-bg);
+}

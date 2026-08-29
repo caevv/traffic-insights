@@ -1,0 +1,16 @@
+.hello-world {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 64px 24px;
+}
+
+.hello-world .audience {
+  color: var(--accent);
+}
+
+.hello-world p {
+  max-width: 520px;
+  text-align: center;
+}

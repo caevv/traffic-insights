@@ -1,0 +1,36 @@
+{
+  "name": "derq-traffic-insights",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Interactive traffic analytics dashboard — Fastify + PostgreSQL API with a React charting frontend.",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:api dev:web",
+    "dev:api": "npm run dev --workspace @derq/api",
+    "dev:web": "npm run dev --workspace @derq/web",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "test:api": "npm run test --workspace @derq/api",
+    "test:web": "npm run test --workspace @derq/web",
+    "db:migrate": "npm run db:migrate --workspace @derq/api",
+    "db:seed": "npm run db:seed --workspace @derq/api",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "lefthook": "^2.1.10",
+    "npm-run-all2": "^8.0.4",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.2"
+  }
+}

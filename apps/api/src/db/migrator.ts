@@ -4,23 +4,19 @@ import { join } from 'node:path'
 import type { Db } from './pool.ts'
 
 /**
- * A deliberately small forward-only migration runner.
+ * Small forward-only migration runner.
  *
- * Three properties matter more than feature count here:
+ * Three things it has to get right:
  *
- *  1. **Safe under concurrency.** Every API replica runs migrations at boot. A
- *     Postgres session-level advisory lock serialises them, so N replicas
- *     starting together apply each migration exactly once instead of racing
- *     and deadlocking on `CREATE TABLE`.
- *  2. **Atomic.** Each file runs inside a transaction together with the insert
- *     into `schema_migrations`. A failure halfway leaves no partial schema and
- *     no bookkeeping row claiming success.
- *  3. **Tamper-evident.** Applied files are checksummed. Editing a migration
- *     that already ran is a hard error, because the database you are looking at
- *     no longer matches the file you are reading.
+ *  1. Safe with many replicas. They all run migrations at boot, so we take a
+ *     Postgres advisory lock. Without it they race each other on CREATE TABLE.
+ *  2. All or nothing. Each file runs in a transaction together with its
+ *     bookkeeping row, so a failure halfway leaves no half-built schema.
+ *  3. Checksums. Editing a migration that already ran is an error, because
+ *     the database no longer matches the file you are reading.
  */
 
-/** Arbitrary but fixed: namespaces our lock inside Postgres' shared lock space. */
+/** Any fixed number. It just namespaces our lock inside Postgres. */
 const ADVISORY_LOCK_KEY = 4_811_552_301
 
 const MIGRATIONS_DIR = join(import.meta.dirname, 'migrations')
@@ -72,8 +68,8 @@ export async function migrate(
   const applied: string[] = []
   const alreadyApplied: string[] = []
 
-  // A dedicated connection: the advisory lock is session-scoped, so it must be
-  // taken and released on the same physical connection.
+  // One dedicated connection. The advisory lock lives on a session, so it has
+  // to be taken and released on the same one.
   const client = await db.connect()
 
   try {
@@ -94,7 +90,7 @@ export async function migrate(
           throw new Error(
             `Migration ${file.version} was modified after it was applied ` +
               `(recorded ${seen.slice(0, 12)}, file ${digest.slice(0, 12)}). ` +
-              `Migrations are immutable — add a new one instead.`,
+              `Migrations can't change. Add a new one instead.`,
           )
         }
         alreadyApplied.push(file.version)
@@ -125,7 +121,7 @@ export async function migrate(
     await client
       .query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCK_KEY])
       .catch(() => {
-        /* The connection is being discarded anyway; the lock dies with it. */
+        // We're throwing the connection away anyway, the lock goes with it.
       })
     client.release()
   }

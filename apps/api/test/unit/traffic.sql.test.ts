@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { buildTrafficFilter } from '../../src/modules/traffic/traffic.sql.ts'
 
 /**
- * The filter builder is the one piece of SQL assembled at runtime, so it is
- * also the one place an injection could be introduced. These tests pin the
- * invariant that keeps it safe: values NEVER reach the SQL string — only
- * `$n` placeholders do.
+ * The filter builder is the only SQL we assemble at runtime, so it's the only
+ * place an injection could get in. These tests pin down the rule that keeps it
+ * safe: values never reach the SQL string, only $n placeholders do.
  */
 describe('buildTrafficFilter', () => {
   it('emits no WHERE clause when nothing is filtered', () => {
@@ -39,15 +38,15 @@ describe('buildTrafficFilter', () => {
       to: new Date('2024-01-02T00:00:00Z'),
     })
 
-    // `BETWEEN` would include both endpoints, double-counting the boundary
-    // hour whenever two adjacent windows are compared.
+    // BETWEEN includes both ends, which double counts the boundary hour when
+    // you compare two windows next to each other.
     expect(clause).not.toContain('BETWEEN')
     expect(clause).toContain('>=')
     expect(clause).toContain('<')
   })
 
   it('continues placeholder numbering from startIndex', () => {
-    // Callers that append LIMIT/OFFSET need to know where to resume.
+    // Callers adding LIMIT/OFFSET need to know where to carry on.
     const { clause, nextIndex } = buildTrafficFilter({ countries: ['DE'] }, 4)
 
     expect(clause).toContain('$5')
@@ -64,13 +63,13 @@ describe('buildTrafficFilter', () => {
 
     expect(clause).not.toContain(hostile)
     expect(clause).not.toContain('DROP')
-    // The string travels as a bound parameter, where it is data, not syntax.
+    // The string goes through as a bound parameter, so it's data, not SQL.
     expect(values).toEqual([[hostile], [hostile]])
   })
 
   it('ignores empty code lists rather than emitting `= ANY (ARRAY[])`', () => {
-    // An empty array would match nothing and silently blank the dashboard;
-    // "no selection" must mean "no filter".
+    // An empty array matches nothing and would blank the dashboard. "Nothing
+    // selected" has to mean "no filter".
     const { clause, values } = buildTrafficFilter({
       countries: [],
       vehicleTypes: [],

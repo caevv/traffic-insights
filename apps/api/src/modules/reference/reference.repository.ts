@@ -19,17 +19,16 @@ export type DataRange = {
 export type Reference = {
   countries: Country[]
   vehicleTypes: VehicleType[]
-  /** Bounds of the data that actually exists, so the UI can size its pickers. */
+  /** The range of data we actually have, so the UI can size its pickers. */
   range: DataRange
 }
 
 /**
- * The dimension tables plus the extent of the fact table, in one round trip.
+ * The dimension tables plus the date range of the data, in one round trip.
  *
- * The frontend needs all three before it can render a single filter control, so
- * shipping them together removes three sequential requests from the critical
- * path of the first paint. `min`/`max` on an indexed column are index scans,
- * not table scans.
+ * The frontend needs all three before it can draw a single filter, so sending
+ * them together saves three requests before the first paint. MIN and MAX on an
+ * indexed column are index scans, not table scans.
  */
 export async function getReference(db: Db): Promise<Reference> {
   const sql = `

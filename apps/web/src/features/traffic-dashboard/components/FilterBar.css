@@ -42,8 +42,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  /* Nudges the button down so it sits level with the chip rows, not the
-     legends above them. */
+  /* Pushes the button down so it lines up with the chips, not the labels
+     above them. */
   padding-top: 18px;
 }
 

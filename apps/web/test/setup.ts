@@ -3,13 +3,12 @@ import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 /**
- * jsdom implements no layout, so every element reports a size of 0x0. Recharts'
- * `ResponsiveContainer` measures its parent and renders nothing at zero width,
- * which would make every chart test assert on an empty SVG.
+ * jsdom does no layout, so every element measures 0x0. Recharts'
+ * ResponsiveContainer measures its parent and draws nothing at zero width, so
+ * every chart test would be checking an empty SVG.
  *
- * Stubbing ResizeObserver and the bounding box gives the charts a viewport to
- * draw into, so the tests exercise the real Recharts rendering path rather than
- * a mock of it.
+ * Stubbing ResizeObserver and the bounding box gives the charts a size to draw
+ * into, so the tests run the real Recharts code and not a mock of it.
  */
 class ResizeObserverStub {
   observe() {}
@@ -34,7 +33,7 @@ Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
   }),
 })
 
-// Recharts reads these directly when sizing its container.
+// Recharts reads these directly when it sizes its container.
 Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
   configurable: true,
   value: 800,

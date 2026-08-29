@@ -4,19 +4,19 @@ import type { Db } from '../db/pool.ts'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    /** The shared connection pool. Handlers use this, never a global import. */
+    /** The shared pool. Handlers use this instead of importing a global. */
     db: Db
   }
 }
 
 /**
- * Attach a connection pool to the instance.
+ * Put a connection pool on the app instance.
  *
- * Injected rather than imported so a test can hand the app a pool pointed at a
- * throwaway database, and so ownership of the pool's lifecycle is explicit:
- * whoever created it decides whether closing the app also closes it. The API
- * server owns its pool; a test suite reuses one pool across many app instances
- * and would be broken by the app closing it on the first teardown.
+ * We pass it in instead of importing it so tests can hand the app a pool
+ * pointing at a throwaway database. It also makes ownership clear: whoever
+ * made the pool decides if closing the app closes it too. The server owns its
+ * pool. Tests reuse one pool across several app instances, and would break if
+ * the first teardown closed it.
  */
 async function databasePlugin(
   app: FastifyInstance,

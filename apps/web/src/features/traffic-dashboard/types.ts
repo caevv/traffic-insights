@@ -1,4 +1,4 @@
-/** Wire types — these mirror the API's response schemas exactly. */
+/** These match the API response shapes exactly. */
 
 export type CountryTraffic = {
   countryCode: string
@@ -12,13 +12,13 @@ export type VehicleTypeTraffic = {
   vehicleType: string
   label: string
   vehicleCount: number
-  /** Fraction of the filtered total, 0..1. */
+  /** Share of the filtered total, 0..1. */
   share: number
   avgSpeedKph: number
 }
 
 export type HourlyTraffic = {
-  /** Hour of day 0..23 in each country's own local time. */
+  /** Hour of day 0..23 in each country's local time. */
   hour: number
   vehicleCount: number
   avgSpeedKph: number
@@ -66,12 +66,12 @@ export type RecordDraft = {
   avgSpeedKph: number
 }
 
-/** What the user has selected. Converted to a query string by `toQuery`. */
+/** What the user picked. toQuery turns this into a query string. */
 export type DashboardFilters = {
-  /** Days of history to include; `null` means the whole dataset. */
+  /** Days of history to include. null means everything. */
   rangeDays: number | null
-  /** ISO country codes. Empty means every country. */
+  /** ISO country codes. Empty means all countries. */
   countries: string[]
-  /** Vehicle type codes. Empty means every type. */
+  /** Vehicle type codes. Empty means all types. */
   vehicleTypes: string[]
 }

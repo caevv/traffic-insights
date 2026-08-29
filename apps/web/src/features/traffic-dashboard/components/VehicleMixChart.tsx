@@ -43,14 +43,13 @@ function VehicleTooltip({ active, payload }: VehicleTooltipProps) {
   )
 }
 
-// `Partial<...>`: Recharts clones the element and injects the geometry, so
-// none of it can be required at the point where `<VehicleSliceShape />` is
-// written.
+// Partial<...> because Recharts clones the element and fills in the geometry.
+// None of it can be required where we write <VehicleSliceShape />.
 type VehicleSliceShapeProps = Partial<PieSectorDataItem> & {
   payload?: VehicleSlice
 }
 
-/** Replaces the deprecated `<Cell>`, same as the bar chart. */
+/** Same as the bar chart: <Cell> is deprecated, so we use `shape`. */
 function VehicleSliceShape({ payload, ...sector }: VehicleSliceShapeProps) {
   return (
     <Sector
@@ -71,15 +70,15 @@ type VehicleMixChartProps = {
 }
 
 /**
- * Vehicle type distribution — the second required graph.
+ * Vehicle type split. The second chart the task asks for.
  *
- * A donut rather than a full pie, because the hole is not decoration: it holds
- * the filtered total, which is the context every slice's share is relative to.
- * Put that number anywhere else and the reader has to hunt for it.
+ * A donut, not a pie, because the hole isn't decoration. It holds the filtered
+ * total, which is what every slice's share is relative to. Put that number
+ * anywhere else and people have to go looking for it.
  *
- * Six categories is about the upper bound of what a pie can honestly convey,
- * so the exact shares also appear in the tooltip and the legend — judging
- * angles by eye stops being reliable past roughly three slices.
+ * Six slices is about as much as a pie can honestly show, so the exact shares
+ * are in the tooltip and the legend too. Judging angles by eye stops working
+ * past about three slices.
  */
 export const VehicleMixChart = memo(function VehicleMixChart({
   data,
@@ -122,10 +121,9 @@ export const VehicleMixChart = memo(function VehicleMixChart({
       </ResponsiveContainer>
 
       {/*
-        The centre label is a positioned DOM node rather than an SVG <text>:
-        it inherits the app's font stack and colour tokens for free, and stays
-        legible at any container size. `pointer-events: none` keeps it from
-        swallowing clicks meant for the slices behind it.
+        The centre label is a positioned DOM node, not an SVG <text>. It picks
+        up the app's fonts and colours for free and stays readable at any size.
+        pointer-events: none stops it eating clicks meant for the slices.
       */}
       <div className="vehicle-mix__center" aria-hidden="true">
         <span className="vehicle-mix__center-value">{totalLabel}</span>
@@ -133,11 +131,11 @@ export const VehicleMixChart = memo(function VehicleMixChart({
       </div>
 
       {/*
-        A legend carrying the actual percentages, not just colour keys. The
-        whole weakness of a pie is that people cannot read an angle; printing
-        the share next to the swatch removes the guesswork the shape imposes.
-        Each row is a button, so the legend is a second, keyboard-reachable
-        route to the same cross-filter the slices provide.
+        A legend with the real percentages, not just colour keys. The weakness
+        of a pie is that people can't read an angle, so printing the share next
+        to the swatch takes the guesswork out. Each row is a button, so the
+        legend is also a keyboard-friendly way to do the same filtering the
+        slices do.
       */}
       <ul className="vehicle-mix__legend" aria-label="Vehicle type shares">
         {slices.map((slice) => (

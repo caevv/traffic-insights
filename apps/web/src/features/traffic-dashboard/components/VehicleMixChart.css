@@ -11,7 +11,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  pointer-events: none; /* never block a click meant for a slice */
+  pointer-events: none; /* don't block clicks meant for a slice */
 }
 
 .vehicle-mix__center-value {

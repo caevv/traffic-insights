@@ -3,19 +3,19 @@ import { env } from './config/env.ts'
 import { pool } from './db/pool.ts'
 
 /**
- * Process entry point: build the app, listen, and shut down cleanly.
+ * Entry point. Build the app, listen, shut down cleanly.
  *
- * Graceful shutdown is what makes rolling deploys and autoscaling
- * non-disruptive. On SIGTERM the server stops accepting new connections,
- * lets in-flight requests finish, then drains the pool. Without it every
- * scale-in event or deploy drops a handful of live requests — the kind of
- * error rate that only shows up once you are running more than one replica.
+ * Clean shutdown is what makes rolling deploys and autoscaling invisible to
+ * users. On SIGTERM we stop taking new connections, let the in-flight requests
+ * finish, then drain the pool. Without it, every deploy or scale-down drops a
+ * handful of live requests. That error rate only shows up once you run more
+ * than one replica.
  */
 
 const app = await buildApp({ db: pool, closeDbOnShutdown: true })
 
-// If shutdown hangs — a wedged query, a socket that will not close — exit
-// anyway rather than waiting for the orchestrator's SIGKILL.
+// If shutdown hangs, say on a stuck query or a socket that won't close, exit
+// anyway instead of waiting for the orchestrator to SIGKILL us.
 const FORCED_EXIT_AFTER_MS = 10_000
 
 let shuttingDown = false

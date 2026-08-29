@@ -1,14 +1,14 @@
-/** Half-open time window `[from, to)`. Either bound may be omitted. */
+/** Time window: from is included, to is not. Both are optional. */
 export type TimeWindow = {
   from?: Date
   to?: Date
 }
 
-/** The filter set every aggregate endpoint accepts. */
+/** The filters every aggregate endpoint takes. */
 export type TrafficFilter = TimeWindow & {
-  /** ISO 3166-1 alpha-2 codes. Empty/omitted means "all countries". */
+  /** ISO country codes. Empty or missing means all countries. */
   countries?: string[]
-  /** Vehicle type codes. Empty/omitted means "all vehicle types". */
+  /** Vehicle type codes. Empty or missing means all types. */
   vehicleTypes?: string[]
 }
 
@@ -17,7 +17,7 @@ export type CountryTraffic = {
   countryName: string
   region: string
   vehicleCount: number
-  /** Volume-weighted mean speed, km/h. */
+  /** Mean speed weighted by volume, km/h. */
   avgSpeedKph: number
 }
 
@@ -25,13 +25,13 @@ export type VehicleTypeTraffic = {
   vehicleType: string
   label: string
   vehicleCount: number
-  /** Fraction of the filtered total, 0..1. Sums to 1 across the response. */
+  /** Share of the filtered total, 0..1. Adds up to 1 across the response. */
   share: number
   avgSpeedKph: number
 }
 
 export type HourlyTraffic = {
-  /** Hour of day 0..23, in each country's own local time. */
+  /** Hour of day 0..23, in each country's local time. */
   hour: number
   vehicleCount: number
   avgSpeedKph: number
@@ -42,7 +42,7 @@ export type TrafficSummary = {
   avgSpeedKph: number
   recordCount: number
   countryCount: number
-  /** Bounds of the data actually matched by the filter; null when empty. */
+  /** Range of the data the filter matched. null when there is none. */
   firstRecordedAt: string | null
   lastRecordedAt: string | null
 }
@@ -75,10 +75,10 @@ export type TrafficRecordInput = {
 }
 
 /**
- * PATCH payload. Spelled out rather than `Partial<TrafficRecordInput>` because
- * `exactOptionalPropertyTypes` makes those two different types: `Partial` means
- * "may be absent", while a parsed JSON body can also carry an explicit
- * `undefined`. The repository treats both as "leave this column alone".
+ * PATCH body. Written out instead of Partial<TrafficRecordInput> because with
+ * exactOptionalPropertyTypes those are different types. Partial means "may be
+ * missing", but a parsed JSON body can also hold an explicit undefined. The
+ * repository treats both as "leave this column alone".
  */
 export type TrafficRecordPatch = {
   [K in keyof TrafficRecordInput]?: TrafficRecordInput[K] | undefined

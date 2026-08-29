@@ -21,11 +21,11 @@ import {
 import type { TrafficFilter } from './traffic.types.ts'
 
 /**
- * Aggregates are pure functions of the query string, so they are safe to cache.
- * A shared `max-age` lets a CDN or reverse proxy absorb the repeated dashboard
- * polls that dominate this workload — the single highest-leverage change
- * between the 5 RPS and 50 RPS tiers. Combined with `@fastify/etag`, a client
- * whose cache has merely gone stale gets a 304 with no body and no query.
+ * The aggregates only depend on the query string, so they're safe to cache. A
+ * shared max-age lets a CDN or proxy soak up the repeated dashboard polls that
+ * make up most of this traffic. It's the biggest single win going from 5 to 50
+ * RPS. With @fastify/etag on top, a client whose cache just went stale gets a
+ * 304 with no body and no database query.
  */
 function setAggregateCacheHeaders(reply: FastifyReply): void {
   reply.header(
@@ -36,7 +36,7 @@ function setAggregateCacheHeaders(reply: FastifyReply): void {
   )
 }
 
-/** Writes invalidate every aggregate, so their responses must never be stored. */
+/** A write changes every aggregate, so never let its response be cached. */
 function setNoStore(reply: FastifyReply): void {
   reply.header('Cache-Control', 'no-store')
 }
@@ -86,7 +86,7 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         summary: 'Country-wise traffic volume',
         description:
           'Total vehicles and volume-weighted mean speed per country, ' +
-          'ordered by volume. Computed by a single GROUP BY in Postgres.',
+          'biggest first. One GROUP BY in Postgres.',
         querystring: trafficFilterSchema,
         response: { 200: z.array(countryTrafficSchema), ...errorResponses },
       },
@@ -104,8 +104,8 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: ['traffic'],
         summary: 'Vehicle type distribution',
         description:
-          "Total vehicles per type together with each type's share of the " +
-          'filtered total. Shares sum to 1.',
+          "Total vehicles per type, plus each type's share of the filtered " +
+          'total. The shares add up to 1.',
         querystring: trafficFilterSchema,
         response: { 200: z.array(vehicleTypeTrafficSchema), ...errorResponses },
       },
@@ -123,8 +123,8 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: ['traffic'],
         summary: 'Traffic rhythm by local hour of day',
         description:
-          "Volume and speed bucketed by hour 0-23 in each country's own " +
-          'timezone, so rush hours align across zones rather than smearing.',
+          "Volume and speed by hour 0-23 in each country's own timezone, so " +
+          'rush hours line up instead of smearing across the day.',
         querystring: trafficFilterSchema,
         response: { 200: z.array(hourlyTrafficSchema), ...errorResponses },
       },
@@ -166,9 +166,9 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: ['records'],
         summary: 'Create a traffic record',
         description:
-          "The fact table's grain is one hour, so `recordedAt` is truncated " +
-          'to the hour it falls in. Re-posting the same country, vehicle ' +
-          'type and hour is a 409 — update the existing record instead.',
+          'Data is hourly, so `recordedAt` is rounded down to its hour. ' +
+          'Posting the same country, vehicle type and hour twice gives a ' +
+          '409. Update the existing record instead.',
         body: createRecordSchema,
         response: {
           201: trafficRecordSchema,

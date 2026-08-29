@@ -1,9 +1,9 @@
 /**
- * The one place that knows how to talk to the API.
+ * The only place that knows how to talk to the API.
  *
- * The server answers every failure with `{ error: { code, message } }`, so
- * unwrapping that here means no component ever has to branch on the shape of a
- * failure — they all receive a thrown `ApiError` with a message worth showing.
+ * The server answers every failure with `{ error: { code, message } }`. We
+ * unwrap that here so no component has to deal with the shape of an error.
+ * They all just get an ApiError with a message worth showing.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
@@ -33,8 +33,8 @@ async function readErrorMessage(response: Response): Promise<ApiError> {
       body.error?.message ?? response.statusText,
     )
   } catch {
-    // A non-JSON body (a proxy's HTML error page, an empty 502) must not
-    // become an unreadable "Unexpected token < in JSON" for the user.
+    // A non-JSON body, like a proxy's HTML error page or an empty 502,
+    // shouldn't turn into "Unexpected token < in JSON" for the user.
     return new ApiError(
       response.status,
       'UNKNOWN',

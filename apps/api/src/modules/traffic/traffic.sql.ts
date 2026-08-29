@@ -9,19 +9,18 @@ export type SqlFragment = {
 }
 
 /**
- * Compose the WHERE clause shared by every traffic query.
+ * Build the WHERE clause that every traffic query shares.
  *
- * The only thing ever interpolated into the SQL string is a placeholder index
- * (`$1`, `$2`, ...) derived from `values.length` — never a caller-supplied
- * value. Values travel separately in the parameter array, so this stays immune
- * to injection while still supporting a variable number of optional filters.
+ * The only thing we ever put into the SQL string is a placeholder number
+ * ($1, $2, ...) taken from values.length. Never a caller's value. Values go in
+ * the parameter array instead, so this is safe from injection and still
+ * handles any number of optional filters.
  *
- * Country and vehicle-type filters are expressed as a semi-join against the
- * dimension tables rather than a join in the outer query. That keeps the scan
- * on `traffic_records` restricted to the indexed `country_id`/`vehicle_type_id`
- * columns, so the covering indexes can still serve the aggregate as an
- * index-only scan; the dimension tables are 16 and 6 rows, so the semi-join is
- * effectively free.
+ * Country and vehicle type filters use a sub-select against the dimension
+ * tables instead of a join in the outer query. That keeps the scan on
+ * traffic_records using the indexed country_id / vehicle_type_id columns, so
+ * the covering indexes can still do an index-only scan. The dimension tables
+ * are 16 and 6 rows, so the sub-select costs nothing.
  */
 export function buildTrafficFilter(
   filter: TrafficFilter,
@@ -39,8 +38,8 @@ export function buildTrafficFilter(
     conditions.push(`t.recorded_at >= ${placeholder(filter.from)}`)
   }
   if (filter.to) {
-    // Half-open: `< to`. Using BETWEEN here is the classic way to
-    // double-count the boundary hour when two adjacent windows are compared.
+    // `< to`, not `<=`. BETWEEN is the classic way to count the boundary
+    // hour twice when you compare two windows next to each other.
     conditions.push(`t.recorded_at < ${placeholder(filter.to)}`)
   }
   if (filter.countries && filter.countries.length > 0) {
@@ -66,11 +65,11 @@ export function buildTrafficFilter(
 }
 
 /**
- * Volume-weighted mean speed.
+ * Mean speed, weighted by volume.
  *
- * `AVG(avg_speed_kph)` would be wrong: it weights an hour with 3 bicycles the
- * same as an hour with 4,000 cars. Weighting by `vehicle_count` gives the mean
- * speed *of the vehicles*, which is the number a traffic analyst means.
+ * A plain AVG(avg_speed_kph) would be wrong. It counts an hour with 3 bicycles
+ * the same as an hour with 4,000 cars. Weighting by vehicle_count gives the
+ * average speed of the vehicles, which is what people actually mean.
  */
 export const WEIGHTED_SPEED = `
   CASE

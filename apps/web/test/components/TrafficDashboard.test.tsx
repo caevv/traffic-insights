@@ -6,16 +6,16 @@ import { TrafficDashboard } from '@/features/traffic-dashboard'
 import { stubApi } from '../helpers/stubApi'
 
 /**
- * The dashboard end to end, with only `fetch` stubbed.
+ * The whole dashboard, with only fetch stubbed.
  *
- * Everything between the DOM and the network runs for real: the query client,
- * the query-string builder, the filter state, and Recharts' actual SVG output.
+ * Everything between the DOM and the network is real: the query client, the
+ * query-string builder, the filter state, and the SVG Recharts draws.
  */
 function renderDashboard() {
   const queryClient = new QueryClient({
     defaultOptions: {
-      // A retry would turn a failing assertion into a timeout, and a stale
-      // time would let one test see another's cached response.
+      // A retry turns a failed assertion into a timeout, and a stale time
+      // lets one test read another test's cached response.
       queries: { retry: false, staleTime: 0, gcTime: 0 },
       mutations: { retry: false },
     },
@@ -37,7 +37,7 @@ describe('TrafficDashboard', () => {
     stubApi()
     renderDashboard()
 
-    // Scoped to the KPI card: 700 is also the total in the donut's centre.
+    // Scoped to the KPI card. 700 is also the total in the donut centre.
     const totalCard = (await screen.findByText('Total vehicles')).closest(
       '.kpi',
     )
@@ -82,11 +82,11 @@ describe('TrafficDashboard', () => {
       call.url.includes('/traffic/by-country'),
     )
     expect(request?.url).toContain('from=')
-    // No dimension filters until the reader picks some.
+    // No country or vehicle filters until someone picks one.
     expect(request?.url).not.toContain('countries=')
   })
 
-  /** The cross-filter contract: a chart click has to reach the network. */
+  /** The point of cross-filtering: a chart click has to reach the network. */
   it('re-queries with a country filter when a legend entry is clicked', async () => {
     const user = userEvent.setup()
     const api = stubApi()
@@ -94,8 +94,8 @@ describe('TrafficDashboard', () => {
 
     await screen.findByText('85.7%')
 
-    // The donut legend doubles as a keyboard-reachable filter control.
-    // Scoped to the legend: a "Car" filter chip carries the same name.
+    // The donut legend is also a keyboard-friendly filter control.
+    // Scoped to the legend, because a "Car" filter chip has the same name.
     const legend = screen.getByRole('list', { name: 'Vehicle type shares' })
     await user.click(within(legend).getByRole('button', { name: /Car/ }))
 

@@ -19,7 +19,7 @@ import { RecordsPanel } from './RecordsPanel'
 import { SummaryStrip } from './SummaryStrip'
 import { VehicleMixChart } from './VehicleMixChart'
 
-/** Enough rows to show the write path working, few enough to stay scannable. */
+/** Enough rows to show the write path, few enough to still read easily. */
 const RECORD_ROWS = 8
 
 export function TrafficDashboard() {
@@ -33,13 +33,12 @@ export function TrafficDashboard() {
   } = useDashboardFilters()
 
   /**
-   * Queries read the DEFERRED filters, the filter bar reads the live ones.
+   * The queries read the DEFERRED filters. The filter bar reads the live ones.
    *
-   * Clicking three country chips in quick succession would otherwise fire
-   * three rounds of five queries and re-render four charts between each. With
-   * the deferred value, the chips respond instantly while React coalesces the
-   * expensive work, and `isStale` dims the charts so the reader can see the
-   * numbers on screen are one step behind their input.
+   * Clicking three country chips quickly would otherwise fire three rounds of
+   * five queries and redraw four charts in between. With the deferred value
+   * the chips still feel instant while React batches the expensive part, and
+   * isStale dims the charts so you can see the numbers are a step behind.
    */
   const deferredFilters = useDeferredValue(filters)
   const isStale = filters !== deferredFilters
@@ -155,7 +154,7 @@ export function TrafficDashboard() {
         <Card
           className="chart-grid__full"
           title="Traffic rhythm by local hour"
-          description="Volume against mean speed, bucketed by each country's own local time — congestion is the gap between the two curves."
+          description="Volume against mean speed, by each country's own local time. Congestion is the gap between the two curves."
         >
           <QueryState
             isPending={byHour.isPending}
@@ -171,7 +170,7 @@ export function TrafficDashboard() {
 
       <Card
         title="Observations"
-        description="Add, edit or remove a record — every chart above re-reads from the database when you do."
+        description="Add, edit or remove a record. Every chart above re-reads from the database when you do."
       >
         <QueryState
           isPending={records.isPending}
@@ -192,8 +191,8 @@ export function TrafficDashboard() {
 
       <footer className="app-footer">
         <span>
-          Aggregates computed in PostgreSQL — one GROUP BY per chart, never in
-          the browser.
+          Aggregates are computed in PostgreSQL. One GROUP BY per chart, never
+          in the browser.
         </span>
         <a href="/docs" target="_blank" rel="noreferrer">
           API documentation →

@@ -15,7 +15,7 @@ import {
 import { createTestDatabase, type TestDatabase } from '../helpers/database.ts'
 import { seedFixtures } from '../helpers/fixtures.ts'
 
-/** The write path — the "enable data updates" requirement. */
+/** The write path. This is the "enable data updates" requirement. */
 describe('traffic records', () => {
   let db: TestDatabase
 
@@ -61,8 +61,8 @@ describe('traffic records', () => {
 
       await createTrafficRecord(db.pool, draft)
 
-      // One observation per country x vehicle type x hour. Allowing a second
-      // would double-count that hour in every chart, silently.
+      // One row per country x vehicle type x hour. A second one would
+      // quietly double count that hour in every chart.
       await expect(createTrafficRecord(db.pool, draft)).rejects.toBeInstanceOf(
         ConflictError,
       )
@@ -133,7 +133,7 @@ describe('traffic records', () => {
         [created.id],
       )
 
-      // The API never sets updated_at; the trigger does, so no writer can
+      // The API never sets updated_at. The trigger does, so nobody can
       // forget it.
       expect(after[0]!.updated_at.getTime()).toBeGreaterThan(
         before[0]!.updated_at.getTime(),
@@ -163,7 +163,7 @@ describe('traffic records', () => {
       ).rejects.toBeInstanceOf(ConflictError)
     })
 
-    it('is a no-op — not an error — when the patch is empty', async () => {
+    it('does nothing, and does not error, when the patch is empty', async () => {
       const created = await createTrafficRecord(db.pool, {
         country: 'NL',
         vehicleType: 'bicycle',
@@ -216,7 +216,7 @@ describe('traffic records', () => {
       expect(page.items).toHaveLength(2)
       expect(page.limit).toBe(2)
       expect(page.offset).toBe(0)
-      // Three German rows in the fixture set; the page shows two of them.
+      // Three German rows in the fixtures, and the page shows two.
       expect(page.total).toBe(3)
     })
 
@@ -238,7 +238,7 @@ describe('traffic records', () => {
         { limit: 1, offset: 0 },
       )
 
-      // `COUNT(*) OVER ()` rides along on every row; it must be stripped.
+      // COUNT(*) OVER () comes back on every row, so we strip it.
       expect(page.items[0]).not.toHaveProperty('total')
     })
   })

@@ -22,7 +22,7 @@ import { trafficRoutes } from './modules/traffic/traffic.routes.ts'
 
 export const API_PREFIX = '/api/v1'
 
-/** Read a `statusCode` off an unknown thrown value without trusting its type. */
+/** Pull a statusCode off an unknown thrown value without trusting its type. */
 function httpStatusOf(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null) return undefined
   const status = (error as { statusCode?: unknown }).statusCode
@@ -31,17 +31,16 @@ function httpStatusOf(error: unknown): number | undefined {
 
 export type BuildAppOptions = {
   db: Db
-  /** End the pool when the app closes. The server sets this; tests do not. */
+  /** Close the pool when the app closes. The server does, tests don't. */
   closeDbOnShutdown?: boolean
 }
 
 /**
- * Build a fully wired app WITHOUT listening on a socket.
+ * Build the whole app but don't listen on a socket.
  *
- * Keeping construction separate from `listen()` is what makes the integration
- * tests fast and hermetic: they use `app.inject()` to drive real routing, real
- * validation and real SQL over an in-process request, with no port to bind and
- * no race to wait out.
+ * Keeping this separate from listen() is what makes the tests fast. They use
+ * app.inject() to run real routing, real validation and real SQL in-process,
+ * with no port to bind and no start-up race to wait for.
  */
 export async function buildApp(
   options: BuildAppOptions,
@@ -49,8 +48,8 @@ export async function buildApp(
   const app = Fastify({
     logger: {
       level: env.LOG_LEVEL,
-      // Strip the noisy default request/response serialisers down to the
-      // fields that are actually useful in a log aggregator.
+      // Trim the default request logging down to the fields that are
+      // actually useful once the logs are in a search tool.
       serializers: {
         req: (request) => ({
           method: request.method,
@@ -61,22 +60,20 @@ export async function buildApp(
         ? { transport: { target: 'pino-pretty', options: { colorize: true } } }
         : {}),
     },
-    // Trust the reverse proxy's X-Forwarded-* headers so rate limiting keys on
-    // the real client IP rather than on the proxy's, which would otherwise
-    // bucket every user in the world together.
+    // Trust the proxy's X-Forwarded-* headers so rate limiting uses the real
+    // client IP. Otherwise every user shares the proxy's one bucket.
     trustProxy: true,
-    // Cap the body size: the write endpoints accept a single small object, so
-    // anything larger is either a bug or an attack.
+    // Cap the body size. The write endpoints take one small object, so
+    // anything bigger is a bug or an attack.
     bodyLimit: 64 * 1024,
-    // Per-request logging stays on. It is the access log — the thing you
-    // actually want when diagnosing a production incident — and `LOG_LEVEL`
-    // already turns it off for an operator who decides the volume costs more
-    // than it is worth. (Fastify's `disableRequestLogging` option is
-    // deprecated in favour of a `logController` class; a level is a simpler
-    // knob for the same outcome.)
+    // Per-request logging stays on. That's the access log, and it's what you
+    // want when something breaks in production. LOG_LEVEL already turns it off
+    // if the volume isn't worth it. (Fastify's disableRequestLogging option is
+    // deprecated now in favour of a logController class. A log level is a
+    // simpler knob for the same thing.)
   }).withTypeProvider<ZodTypeProvider>()
 
-  // Zod drives BOTH directions: request validation and response serialisation.
+  // Zod does both directions: checking requests and serialising responses.
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
 
@@ -86,8 +83,8 @@ export async function buildApp(
   })
 
   await app.register(helmet, {
-    // The Swagger UI needs inline styles/scripts; the API itself serves only
-    // JSON, so a strict CSP here would buy nothing and break the docs page.
+    // The Swagger UI needs inline styles and scripts. The API only serves
+    // JSON, so a strict CSP here would gain nothing and break the docs page.
     contentSecurityPolicy: false,
   })
 
@@ -97,15 +94,15 @@ export async function buildApp(
     maxAge: 86_400,
   })
 
-  // ETag + the Cache-Control headers the routes set turn a repeated dashboard
-  // poll into a 304 with no body — see docs/scalability.md.
+  // ETag plus the Cache-Control headers the routes set turn a repeated
+  // dashboard poll into a 304 with no body. See docs/scalability.md.
   await app.register(etag, { weak: true })
 
   await app.register(rateLimit, {
     max: env.RATE_LIMIT_MAX,
     timeWindow: env.RATE_LIMIT_WINDOW,
-    // Health checks must never be throttled: a rate-limited readiness probe
-    // makes an orchestrator evict a perfectly healthy replica.
+    // Never rate limit health checks. A throttled readiness probe makes the
+    // orchestrator drop a perfectly healthy replica.
     allowList: (request) => request.url.startsWith('/health'),
   })
 
@@ -114,15 +111,14 @@ export async function buildApp(
       info: {
         title: 'Traffic Insights API',
         description:
-          'Aggregated traffic analytics. Every aggregate is computed by a ' +
-          'single GROUP BY in PostgreSQL; no endpoint streams rows into the ' +
-          'application to reduce them there.',
+          'Traffic analytics. Every aggregate is one GROUP BY in PostgreSQL. ' +
+          'No endpoint pulls rows into the app to add them up there.',
         version: '1.0.0',
       },
       servers: [{ url: API_PREFIX, description: 'Versioned API root' }],
       tags: [
         { name: 'traffic', description: 'Aggregated read models' },
-        { name: 'records', description: 'Raw records — the write path' },
+        { name: 'records', description: 'Raw records. The write path.' },
         { name: 'reference', description: 'Dimension data for filters' },
         { name: 'health', description: 'Liveness and readiness probes' },
       ],
@@ -136,19 +132,19 @@ export async function buildApp(
   })
 
   // ---------------------------------------------------------------------------
-  // One error handler, one response shape — installed BEFORE the routes.
+  // One error handler, one response shape. Set up BEFORE the routes.
   //
   // Clients get `{ error: { code, message, details? } }` for every failure, so
-  // the frontend has exactly one branch to write. Unexpected errors are logged
-  // in full and reported as a bare 500 — internal messages and stack traces
-  // are never echoed to a caller.
+  // the frontend only needs one branch. Unexpected errors get logged in full
+  // and returned as a plain 500. We never send internal messages or stack
+  // traces back to a caller.
   //
-  // Order matters and is not obvious: `setErrorHandler` is NOT retroactive.
-  // Fastify copies the parent's handler into each child encapsulation context
-  // at the moment `register()` creates it, so registering routes first would
-  // leave every route on the default handler — which then fails to serialise
-  // against the declared error schema. Only the error paths break that way, so
-  // the bug survives any suite that exercises only happy paths.
+  // The order matters and it's not obvious: setErrorHandler does not apply to
+  // routes that are already registered. Fastify copies the parent handler into
+  // each child context when register() runs, so registering routes first
+  // leaves them all on the default handler, which then fails to serialise
+  // against our error schema. Only the error paths break, so this bug survives
+  // any test suite that only checks happy paths.
   // ---------------------------------------------------------------------------
   app.setErrorHandler((error: unknown, request, reply) => {
     reply.header('Cache-Control', 'no-store')
@@ -159,8 +155,8 @@ export async function buildApp(
         error: {
           code: 'BAD_REQUEST',
           message: 'Request failed validation.',
-          // `instancePath` is a JSON Pointer ("/from"); clients want a plain
-          // field path ("from"), and a nested one dotted rather than slashed.
+          // instancePath is a JSON Pointer like "/from". Clients want a
+          // plain field name, and dots for nested ones.
           details: error.validation.map((issue) => ({
             path: issue.instancePath.replace(/^\//, '').replaceAll('/', '.'),
             message: issue.message ?? 'Invalid value',
@@ -191,8 +187,8 @@ export async function buildApp(
       })
     }
 
-    // Anything Fastify itself rejected (malformed JSON, unsupported media
-    // type, oversized body) is the caller's fault and safe to describe.
+    // Anything Fastify rejected itself (bad JSON, wrong content type, body
+    // too big) is the caller's fault and safe to explain.
     if (status !== undefined && status < 500) {
       return reply.status(status).send({
         error: {

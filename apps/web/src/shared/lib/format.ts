@@ -1,10 +1,9 @@
 /**
- * Formatters are module-level singletons.
+ * Formatters live at module level.
  *
- * Constructing an `Intl.NumberFormat` is expensive — far more so than the
- * `format()` call itself. Creating one inside a chart tick callback would build
- * a new formatter for every tick on every render; hoisting them means each is
- * constructed exactly once for the life of the page.
+ * Building an Intl.NumberFormat costs much more than calling format() on it.
+ * Making one inside a chart tick callback would build a new formatter for
+ * every tick on every render. Up here, each one is built once per page.
  */
 
 const compactNumber = new Intl.NumberFormat('en-US', {
@@ -30,11 +29,11 @@ const dateTime = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 })
 
-/** `1.2M` — for axis ticks, where horizontal space is the binding constraint. */
+/** `1.2M`, for axis ticks where space is tight. */
 export const formatCompact = (value: number): string =>
   compactNumber.format(value)
 
-/** `1,234,567` — for tooltips and KPIs, where the exact figure is the point. */
+/** `1,234,567`, for tooltips and KPIs where the exact number is the point. */
 export const formatNumber = (value: number): string => fullNumber.format(value)
 
 export const formatPercent = (fraction: number): string =>
@@ -46,6 +45,6 @@ export const formatSpeed = (kph: number): string =>
 export const formatTimestamp = (iso: string): string =>
   `${dateTime.format(new Date(iso))} UTC`
 
-/** `07:00` — hour-of-day axis labels. */
+/** `07:00`, for hour-of-day axis labels. */
 export const formatHour = (hour: number): string =>
   `${String(hour).padStart(2, '0')}:00`

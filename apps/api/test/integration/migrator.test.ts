@@ -11,8 +11,8 @@ describe('migrator', () => {
   let db: TestDatabase
 
   beforeAll(async () => {
-    // `createTestDatabase` already migrated this database to head, which is
-    // itself the happy-path assertion the tests below build on.
+    // createTestDatabase already migrated this one. That's the happy path,
+    // and the tests below build on it.
     db = await createTestDatabase('migrator')
   })
 
@@ -20,7 +20,7 @@ describe('migrator', () => {
     await db.destroy()
   })
 
-  it('is idempotent — a second run applies nothing', async () => {
+  it('applies nothing on a second run', async () => {
     const result = await migrate(db.pool)
 
     expect(result.applied).toEqual([])
@@ -41,7 +41,7 @@ describe('migrator', () => {
 
   it('refuses to run when an applied migration has been edited', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'derq-migrations-'))
-    // Same VERSION as one already applied, different CONTENT.
+    // Same version as one already applied, but different content.
     await writeFile(
       join(directory, '001_initial_schema.sql'),
       'SELECT 1; -- tampered',
@@ -55,8 +55,8 @@ describe('migrator', () => {
   it('enforces the natural key created by the schema', async () => {
     await seedFixtures(db.pool)
 
-    // A duplicate (country, vehicle type, hour) must be impossible at the
-    // DATABASE level, not merely discouraged in application code.
+    // A duplicate (country, vehicle type, hour) has to be impossible in the
+    // DATABASE, not just discouraged in app code.
     await expect(
       db.pool.query(
         `INSERT INTO traffic_records
@@ -77,7 +77,7 @@ describe('migrator', () => {
          FROM countries c, vehicle_types v
          WHERE c.iso_code = 'DE' AND v.code = 'car'`,
       ),
-      // CHECK violation: the grain of the fact table is one hour.
+      // CHECK violation. The data is hourly.
     ).rejects.toMatchObject({ code: '23514' })
   })
 
@@ -110,21 +110,21 @@ describe('seed', () => {
   })
 
   it('generates a full grid of country x vehicle type x hour', async () => {
-    // Two days keeps the test quick while still covering the cross join.
+    // Two days keeps this quick and still covers the cross join.
     const { inserted, total } = await seed(db.pool, { days: 2 })
 
-    // 16 countries x 6 vehicle types x (2 x 24 + 1) hours — the generator is
-    // inclusive of both endpoints of the hourly series.
+    // 16 countries x 6 vehicle types x (2 x 24 + 1) hours. The series
+    // includes both ends.
     const expectedRows = 16 * 6 * (2 * 24 + 1)
     expect(inserted).toBe(expectedRows)
     expect(total).toBe(expectedRows)
     expect(await isEmpty(db.pool)).toBe(false)
   })
 
-  it('is idempotent — re-seeding the same window inserts nothing', async () => {
+  it('inserts nothing when the same window is seeded again', async () => {
     const { inserted } = await seed(db.pool, { days: 2 })
 
-    // The ON CONFLICT clause makes the seed safe as a container start-up step.
+    // ON CONFLICT is what makes the seed safe to run at container start-up.
     expect(inserted).toBe(0)
   })
 
@@ -151,7 +151,7 @@ describe('seed', () => {
     expect(stats.off_hour).toBe(0)
   })
 
-  it('models a rush hour — peak volume is well above the overnight trough', async () => {
+  it('models a rush hour, with peak volume well above the night low', async () => {
     const { rows } = await db.pool.query<{ hour: number; total: number }>(`
       SELECT EXTRACT(HOUR FROM t.recorded_at AT TIME ZONE c.timezone)::int AS hour,
              SUM(t.vehicle_count)::bigint AS total
@@ -164,12 +164,12 @@ describe('seed', () => {
     const morningPeak = byHour.get(8) ?? 0
     const overnightTrough = byHour.get(2) ?? 0
 
-    // If this ever fails, the generated data has gone flat and the charts
-    // would show noise instead of structure.
+    // If this fails, the generated data went flat and the charts would show
+    // noise instead of a real shape.
     expect(morningPeak).toBeGreaterThan(overnightTrough * 2)
   })
 
-  it('models congestion — mean speed at the peak is below the overnight mean', async () => {
+  it('models congestion, with peak speed below the overnight average', async () => {
     const { rows } = await db.pool.query<{ hour: number; speed: number }>(`
       SELECT EXTRACT(HOUR FROM t.recorded_at AT TIME ZONE c.timezone)::int AS hour,
              (SUM(t.avg_speed_kph * t.vehicle_count) / SUM(t.vehicle_count))::float8 AS speed

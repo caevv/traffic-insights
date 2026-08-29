@@ -4,7 +4,7 @@ type ToggleChipProps = {
   label: string
   selected: boolean
   onToggle: () => void
-  /** Paints the chip's dot, tying it to the colour it has in the charts. */
+  /** Colours the dot so it matches the chart. */
   color?: string
   title?: string
 }
@@ -12,9 +12,9 @@ type ToggleChipProps = {
 /**
  * A filter chip.
  *
- * Rendered as a real `<button>` with `aria-pressed` rather than a styled `div`,
- * so it is reachable by Tab, operable with Space and Enter, and announced with
- * its on/off state — none of which a `div` with an onClick gives you.
+ * A real <button> with aria-pressed, not a styled div. So it's reachable with
+ * Tab, works with Space and Enter, and screen readers say whether it's on. A
+ * div with an onClick gives you none of that.
  */
 export function ToggleChip({
   label,

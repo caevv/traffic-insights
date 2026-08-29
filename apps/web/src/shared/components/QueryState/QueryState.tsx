@@ -5,9 +5,9 @@ import './QueryState.css'
 type QueryStateProps = {
   isPending: boolean
   error: Error | null
-  /** The request succeeded but matched nothing — a distinct state from both. */
+  /** The request worked but matched nothing. Not the same as an error. */
   isEmpty?: boolean
-  /** Reserved height, so resolving a query does not shift the page. */
+  /** Space we hold, so the page doesn't jump when the query finishes. */
   height?: number
   emptyMessage?: string
   onRetry?: () => void
@@ -15,14 +15,14 @@ type QueryStateProps = {
 }
 
 /**
- * The four states every remote read can be in, rendered one way everywhere.
+ * The four states any remote read can be in, drawn the same way everywhere.
  *
- * "Empty" is deliberately separate from "loading" and "error": a filter that
- * matches no data is a normal outcome the reader caused and can undo, not a
- * fault. Collapsing it into an error teaches people to distrust real errors.
+ * "Empty" is kept separate from "loading" and "error" on purpose. A filter
+ * that matches nothing is a normal thing the user did and can undo, not a
+ * fault. Showing it as an error teaches people to ignore real errors.
  *
- * `height` is reserved up front so a chart resolving does not shove the rest
- * of the dashboard down the page.
+ * We reserve `height` up front so a chart loading doesn't push the rest of the
+ * dashboard down the page.
  */
 export function QueryState({
   isPending,

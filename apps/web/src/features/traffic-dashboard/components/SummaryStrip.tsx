@@ -6,12 +6,12 @@ import './SummaryStrip.css'
 type KpiCardProps = {
   label: string
   value: string
-  /** Secondary line: what the figure is derived from, or its coverage. */
+  /** Second line: where the number comes from, or what it covers. */
   detail?: string
   accent?: string
 }
 
-/** Module scope, not nested — one component type, reused four times. */
+/** Module level, not nested. One component type, used four times. */
 function KpiCard({ label, value, detail, accent }: KpiCardProps) {
   return (
     <div
@@ -50,8 +50,8 @@ export const SummaryStrip = memo(function SummaryStrip({
       <KpiCard
         label="Mean speed"
         value={formatSpeed(summary.avgSpeedKph)}
-        // Saying so matters: an unweighted average of hourly averages would
-        // give a visibly different — and wrong — number.
+        // Worth saying. A plain average of hourly averages gives a clearly
+        // different, and wrong, number.
         detail="Weighted by vehicle count"
         accent="var(--series-2)"
       />

@@ -2,16 +2,15 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
 /**
- * Liveness and readiness are deliberately different checks.
+ * Liveness and readiness are two different questions on purpose.
  *
- * `/health/live` answers "is this process wedged?" and must not touch the
- * database — if it did, a database blip would make every orchestrator kill
- * every otherwise-healthy replica at once, turning a degradation into an
- * outage.
+ * /health/live asks "is this process stuck?". It must not touch the database.
+ * If it did, one database hiccup would make the orchestrator kill every
+ * healthy replica at once and turn a slow day into an outage.
  *
- * `/health/ready` answers "should this replica receive traffic?" and therefore
- * does check the database, so a replica that cannot serve is taken out of the
- * load balancer's rotation without being restarted.
+ * /health/ready asks "should this replica get traffic?", so it does check the
+ * database. A replica that can't serve gets pulled from the load balancer
+ * without being restarted.
  */
 export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
@@ -19,7 +18,7 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: ['health'],
-        summary: 'Liveness probe — process only, never touches the database',
+        summary: 'Liveness. Process only, never touches the database',
         response: {
           200: z.object({
             status: z.literal('ok'),
@@ -42,7 +41,7 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: ['health'],
-        summary: 'Readiness probe — verifies the database is reachable',
+        summary: 'Readiness. Checks the database is reachable',
         response: {
           200: z.object({
             status: z.literal('ready'),

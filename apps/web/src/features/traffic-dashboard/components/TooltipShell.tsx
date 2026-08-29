@@ -9,18 +9,18 @@ type TooltipRow = {
 type TooltipShellProps = {
   title: string
   rows: TooltipRow[]
-  /** Optional hint about what clicking does, shown in a quieter style. */
+  /** Optional hint about what a click does, in a quieter style. */
   hint?: string
 }
 
 /**
- * Presentation for every chart tooltip in the dashboard.
+ * How every chart tooltip looks.
  *
- * Defined at module scope — NOT inside a chart component. A component declared
- * inside another is a new component type on every render, which makes React
- * unmount and remount it constantly; for a tooltip that means it flickers and
- * loses its position as you move the pointer. Each chart wraps this in its own
- * small module-scope adapter that unpacks Recharts' payload.
+ * Declared at module level, NOT inside a chart component. A component declared
+ * inside another one is a new component type on every render, so React keeps
+ * unmounting and remounting it. For a tooltip that means it flickers and loses
+ * its position as you move the mouse. Each chart wraps this in its own small
+ * module-level adapter that unpacks the Recharts payload.
  */
 export function TooltipShell({ title, rows, hint }: TooltipShellProps) {
   return (

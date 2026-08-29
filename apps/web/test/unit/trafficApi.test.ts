@@ -33,12 +33,12 @@ describe('toQuery', () => {
   })
 
   /**
-   * The cache-correctness test.
+   * The test that keeps the caching honest.
    *
-   * A window start computed from a raw `Date.now()` changes on every render,
-   * so every render would produce a new URL — a miss in TanStack Query's cache
-   * AND a miss against the server's `Cache-Control`. Snapping to the top of the
-   * hour is what makes both caches actually work.
+   * A window start built from a raw Date.now() changes every render, so every
+   * render would make a new URL. That's a miss in TanStack Query's cache and a
+   * miss on the server's Cache-Control. Rounding down to the hour is what
+   * makes both caches work.
    */
   describe('window start is snapped to the hour', () => {
     it('is stable across calls made at different minutes of the same hour', () => {

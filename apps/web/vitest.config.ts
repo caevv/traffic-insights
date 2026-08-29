@@ -14,9 +14,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    // Outside `src/` on purpose: the ESLint `boundaries` rules treat every
-    // file under src/ as app, feature or shared code, and a test harness is
-    // none of those.
+    // Outside src/ on purpose. The ESLint boundaries rules treat everything
+    // under src/ as app, feature or shared code, and test setup is none of
+    // those.
     setupFiles: ['./test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'test/**/*.test.{ts,tsx}'],
     coverage: {

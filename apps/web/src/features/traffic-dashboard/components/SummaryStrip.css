@@ -24,7 +24,7 @@
   color: var(--text-strong);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  /* Long figures wrap rather than blowing out the grid column. */
+  /* Long numbers wrap instead of blowing out the column. */
   overflow-wrap: anywhere;
 }
 

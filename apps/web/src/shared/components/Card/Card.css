@@ -5,7 +5,7 @@
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  min-width: 0; /* lets a grid child shrink instead of overflowing the row */
+  min-width: 0; /* lets a grid child shrink instead of overflowing */
 }
 
 .card__header {

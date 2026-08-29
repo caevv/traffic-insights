@@ -9,12 +9,11 @@ import type {
 } from '@/features/traffic-dashboard/types'
 
 /**
- * A stub of the HTTP boundary — `fetch` itself, not the app's own modules.
+ * We stub fetch itself, not our own modules.
  *
- * Stubbing `fetch` means the tests still run the real `apiClient`, the real
- * query-string construction and the real TanStack Query cache. Mocking the
- * query hooks instead would leave all of that untested while still producing
- * a green suite.
+ * That way the tests still run the real apiClient, the real query-string
+ * building and the real TanStack Query cache. Mocking the query hooks instead
+ * would leave all of that untested and still give a green suite.
  */
 
 const REFERENCE: Reference = {
@@ -97,7 +96,7 @@ const RECORDS: TrafficRecordPage = {
 }
 
 export type StubbedApi = {
-  /** Every URL requested, in order — assert on what the app actually asked for. */
+  /** Every URL requested, in order. Check what the app really asked for. */
   calls: { url: string; method: string }[]
 }
 

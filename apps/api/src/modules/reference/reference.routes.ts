@@ -4,12 +4,11 @@ import { referenceSchema } from '../traffic/traffic.schemas.ts'
 import { getReference } from './reference.repository.ts'
 
 /**
- * Dimension data for the dashboard's filter controls.
+ * Dimension data for the dashboard filters.
  *
- * Reference data changes on the order of never, so it carries a longer cache
- * lifetime than the aggregates — ten minutes rather than one. It is also the
- * first request the frontend makes, so keeping it out of the database on
- * repeat visits removes a query from every cold page load.
+ * This basically never changes, so it gets a longer cache time than the
+ * aggregates: ten minutes instead of one. It's also the first request the
+ * frontend makes, so caching it saves a query on every repeat page load.
  */
 export const referenceRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(

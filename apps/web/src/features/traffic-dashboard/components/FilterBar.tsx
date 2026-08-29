@@ -17,12 +17,12 @@ type FilterBarProps = {
 }
 
 /**
- * Every filter in one place, as chips.
+ * All the filters in one place, as chips.
  *
- * Chips rather than `<select multiple>`: the current selection is visible at a
- * glance and removable in one click, which a multi-select hides behind a
- * scroll box. The same chips are also driven by clicking the charts, so the
- * bar doubles as a readout of what the charts did.
+ * Chips instead of <select multiple>. You can see what's selected at a glance
+ * and remove it in one click. A multi-select hides all that in a scroll box.
+ * Clicking the charts drives the same chips, so this bar also shows you what
+ * the charts just did.
  */
 export const FilterBar = memo(function FilterBar({
   filters,
@@ -76,7 +76,7 @@ export const FilterBar = memo(function FilterBar({
             <ToggleChip
               key={country.code}
               label={country.code}
-              title={`${country.name} — ${country.region}`}
+              title={`${country.name}, ${country.region}`}
               selected={filters.countries.includes(country.code)}
               onToggle={() => onToggleCountry(country.code)}
             />

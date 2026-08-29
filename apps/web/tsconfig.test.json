@@ -1,18 +1,17 @@
 {
   /*
-   * Tests get their own program that spans `src` AND `test`.
+   * Tests get their own program covering src AND test.
    *
-   * A project *reference* to tsconfig.app.json would be the tidier shape, but
-   * references resolve through a project's emitted declarations, and the app
-   * project is `noEmit` — so TypeScript reports every import into src as
-   * TS6307. Including the sources directly costs one extra type-check pass and
-   * nothing else.
+   * A project reference to tsconfig.app.json would be tidier, but references
+   * go through a project's emitted declarations, and the app project is
+   * noEmit. So TypeScript reports every import into src as TS6307. Including
+   * the sources directly costs one extra type-check pass and nothing else.
    */
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
     "composite": false,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
-    /* `vite/client` for `import.meta.env`, `node` for the test process. */
+    /* vite/client for import.meta.env, node for the test process. */
     "types": [
       "node",
       "vite/client",

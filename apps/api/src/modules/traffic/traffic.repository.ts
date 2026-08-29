@@ -20,15 +20,14 @@ import type {
 } from './traffic.types.ts'
 
 /**
- * Every aggregate below is a single round trip that returns AT MOST as many
- * rows as the grouping dimension has members (16 countries, 6 vehicle types,
- * 24 hours). No query streams the fact table into Node to be reduced there —
- * that would move hundreds of thousands of rows across the socket to compute a
- * number Postgres can produce during the scan it is already doing.
+ * Each query below is one round trip and returns at most as many rows as the
+ * thing it groups by: 16 countries, 6 vehicle types, 24 hours. Nothing pulls
+ * the fact table into Node to add it up there. That would push hundreds of
+ * thousands of rows over the socket for a number Postgres can work out during
+ * the scan it's already doing.
  *
- * Rendering timestamps: `to_char(... AT TIME ZONE 'UTC', ...)` emits ISO-8601
- * text straight from Postgres, so the JSON is identical regardless of the
- * container's `TZ`.
+ * Timestamps use to_char(... AT TIME ZONE 'UTC', ...) so Postgres writes the
+ * ISO string itself and the JSON is the same whatever TZ the container has.
  */
 
 const ISO_UTC = `'YYYY-MM-DD"T"HH24:MI:SS"Z"'`
@@ -44,9 +43,9 @@ export async function getTrafficByCountry(
 ): Promise<CountryTraffic[]> {
   const { clause, values } = buildTrafficFilter(filter)
 
-  // Group on the indexed `country_id` first, then join the 16-row dimension
-  // table to the already-aggregated result. Joining before the GROUP BY would
-  // force a heap fetch per fact row and give up the index-only scan.
+  // Group on the indexed country_id first, then join the 16-row table onto
+  // the result. Joining before the GROUP BY means a table read per fact row,
+  // and we lose the index-only scan.
   const sql = `
     WITH aggregated AS (
       SELECT
@@ -72,12 +71,11 @@ export async function getTrafficByCountry(
 }
 
 /**
- * Vehicle type distribution with each type's share of the filtered total.
+ * Vehicle types with each one's share of the filtered total.
  *
- * The share is computed by a window aggregate over the grouped rows —
- * `SUM(...) OVER ()` sums the six group totals, so the denominator comes from
- * the same single pass. Computing it in Node would mean either a second query
- * or a total that can disagree with the parts.
+ * The share comes from a window function over the grouped rows. SUM(...) OVER ()
+ * adds up the six group totals, so the divisor comes from the same pass. Doing
+ * it in Node would mean a second query, or a total that doesn't match the parts.
  */
 export async function getTrafficByVehicleType(
   db: Db,
@@ -117,16 +115,16 @@ export async function getTrafficByVehicleType(
 }
 
 /**
- * Volume and speed by hour of day, in each country's OWN local time.
+ * Volume and speed by hour of day, in each country's own local time.
  *
- * `AT TIME ZONE c.timezone` resolves the IANA zone against Postgres' tz
- * database, DST included, so 08:00 in Berlin and 08:00 in Tokyo land in the
- * same bucket. Bucketing by UTC hour instead would smear every rush hour into
- * a flat line — the chart would be technically correct and completely useless.
+ * AT TIME ZONE c.timezone looks the zone up in Postgres' own tz database, DST
+ * and all, so 08:00 in Berlin and 08:00 in Tokyo end up in the same bucket.
+ * Bucketing by UTC hour instead would smear all 16 rush hours across the day
+ * and flatten the chart. Correct, but useless.
  *
- * This is the one aggregate that cannot use the covering indexes: it needs
- * `countries.timezone`, so it joins before grouping. See docs/scalability.md —
- * it is the first query that should be pre-aggregated.
+ * This is the one query that can't use the covering indexes. It needs
+ * countries.timezone, so it joins before grouping. See docs/scalability.md.
+ * It's the first one to pre-aggregate.
  */
 export async function getTrafficByHour(
   db: Db,
@@ -182,7 +180,7 @@ export async function getTrafficSummary(
 }
 
 // ---------------------------------------------------------------------------
-// Records — the write path
+// Records. The write path.
 // ---------------------------------------------------------------------------
 
 const RECORD_PROJECTION = `
@@ -210,9 +208,9 @@ export async function listTrafficRecords(
 ): Promise<Page<TrafficRecord>> {
   const { clause, values, nextIndex } = buildTrafficFilter(filter)
 
-  // `COUNT(*) OVER ()` gets the unpaginated total from the same scan instead of
-  // a second round trip. It is O(matched rows); at much larger volumes this is
-  // the row to switch to keyset pagination (see docs/scalability.md).
+  // COUNT(*) OVER () gets the full total from the same scan, so no second
+  // round trip. It costs one pass over the matched rows. At much bigger
+  // volumes, switch to keyset pagination (see docs/scalability.md).
   const sql = `
     SELECT ${RECORD_PROJECTION},
            COUNT(*) OVER ()::bigint AS "total"
@@ -252,10 +250,10 @@ export async function createTrafficRecord(
   db: Db,
   input: TrafficRecordInput,
 ): Promise<TrafficRecord> {
-  // `INSERT ... SELECT` from the dimension tables resolves the codes and
-  // validates them in the same statement. An unknown code yields zero source
-  // rows, so nothing is inserted and we can report precisely which side failed
-  // — without a separate lookup round trip that another writer could race.
+  // INSERT ... SELECT from the dimension tables looks up the codes and checks
+  // them in one statement. An unknown code gives zero rows, so nothing is
+  // inserted and we can say which side was wrong. No separate lookup query
+  // that another writer could race.
   const sql = `
     INSERT INTO traffic_records
       (country_id, vehicle_type_id, recorded_at, vehicle_count, avg_speed_kph)
@@ -303,8 +301,8 @@ export async function updateTrafficRecord(
   const assignments: string[] = []
   const values: unknown[] = []
 
-  // Same discipline as the filter builder: only the placeholder INDEX is ever
-  // interpolated into the SQL text.
+  // Same rule as the filter builder: only the placeholder number goes into
+  // the SQL text.
   const placeholder = (value: unknown): string => {
     values.push(value)
     return `$${values.length}`
@@ -331,8 +329,8 @@ export async function updateTrafficRecord(
   }
 
   if (assignments.length === 0) {
-    // Nothing to change — return the record untouched rather than issuing an
-    // UPDATE that would bump `updated_at` for no reason.
+    // Nothing to change. Return the record as is, instead of running an
+    // UPDATE that would bump updated_at for no reason.
     return getTrafficRecord(db, id)
   }
 
@@ -353,8 +351,8 @@ export async function updateTrafficRecord(
           'country, vehicle type and hour.',
       )
     }
-    // A bad code makes the sub-select yield NULL, which the NOT NULL column
-    // rejects (23502). Report it as an unprocessable value, not a 500.
+    // A bad code makes the sub-select return NULL, and the NOT NULL column
+    // rejects it (23502). That's a bad value, not a server error.
     if (isPgError(error, '23502')) {
       throw new UnprocessableError('Unknown country or vehicle type.', {
         ...(patch.country !== undefined ? { country: patch.country } : {}),

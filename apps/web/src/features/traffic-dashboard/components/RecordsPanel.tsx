@@ -5,7 +5,7 @@ import type { RecordMutations } from '../api/queries'
 import type { Reference, TrafficRecord } from '../types'
 import './RecordsPanel.css'
 
-/** `YYYY-MM-DDTHH:00`, the shape `<input type="datetime-local">` expects. */
+/** `YYYY-MM-DDTHH:00`, which is what <input type="datetime-local"> wants. */
 function currentHourLocalInput(): string {
   const now = new Date()
   now.setMinutes(0, 0, 0)
@@ -23,17 +23,16 @@ type RecordsPanelProps = {
 }
 
 /**
- * The write path: create, edit and delete observations.
+ * The write path: add, edit and delete records.
  *
- * This is deliberately the smallest surface that satisfies "enable data
- * updates" — not an admin CRUD console. Its real job is to demonstrate the
- * round trip: change a number here, and the charts above re-render from the
- * database because the mutation invalidates their queries.
+ * This is the smallest thing that covers "enable data updates". It's not an
+ * admin console. Its real job is to show the round trip: change a number here
+ * and the charts above redraw from the database, because the mutation
+ * invalidates their queries.
  *
- * Only `vehicleCount` is editable inline. It is the measure that visibly moves
- * every chart, so it makes the invalidation observable; the rest of a record
- * is its identity, and editing identity in place invites accidental collisions
- * with the natural key.
+ * Only vehicleCount can be edited inline. It's the number that visibly moves
+ * every chart, so you can see the invalidation happen. The rest of a record is
+ * its identity, and editing that in place runs into the natural key.
  */
 export function RecordsPanel({
   records,
@@ -64,10 +63,10 @@ export function RecordsPanel({
       {
         country: draft.country,
         vehicleType: draft.vehicleType,
-        // `datetime-local` yields a naive local string; `new Date` reads it in
-        // the browser's zone and `toISOString` converts to the UTC instant the
-        // API stores. Sending the naive string would shift every record by the
-        // reader's UTC offset.
+        // datetime-local gives a plain local string. new Date reads it in the
+        // browser's zone and toISOString turns it into the UTC time the API
+        // stores. Sending the raw string would shift every record by the
+        // user's UTC offset.
         recordedAt: new Date(draft.recordedAt).toISOString(),
         vehicleCount: Number(draft.vehicleCount),
         avgSpeedKph: Number(draft.avgSpeedKph),

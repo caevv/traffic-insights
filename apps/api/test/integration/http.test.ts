@@ -5,12 +5,12 @@ import { createTestDatabase, type TestDatabase } from '../helpers/database.ts'
 import { EXPECTED, seedFixtures } from '../helpers/fixtures.ts'
 
 /**
- * The HTTP surface, driven through `app.inject()`.
+ * The HTTP layer, driven through app.inject().
  *
- * `inject` runs the real router, the real Zod validation and the real SQL over
- * an in-process request — no socket to bind, no port to race. That makes these
- * as fast as unit tests while still covering the wiring that unit tests miss:
- * status codes, headers, serialisation, and the error handler.
+ * inject runs the real router, real Zod validation and real SQL over an
+ * in-process request. No socket, no port to race on. So these are as fast as
+ * unit tests but still cover what unit tests miss: status codes, headers,
+ * serialisation and the error handler.
  */
 describe('HTTP API', () => {
   let db: TestDatabase
@@ -19,7 +19,7 @@ describe('HTTP API', () => {
   beforeAll(async () => {
     db = await createTestDatabase('http')
     await seedFixtures(db.pool)
-    // `closeDbOnShutdown` stays false: the test owns the pool's lifecycle.
+    // closeDbOnShutdown stays false. The test owns the pool.
     app = await buildApp({ db: db.pool })
     await app.ready()
   })
@@ -156,7 +156,7 @@ describe('HTTP API', () => {
         payload: {
           country: 'gb',
           vehicleType: 'VAN',
-          // 34 minutes past the hour — the fact table's grain is one hour.
+          // 34 minutes past the hour. The data is hourly.
           recordedAt: '2024-03-02T14:34:21Z',
           vehicleCount: 500,
           avgSpeedKph: 58.25,

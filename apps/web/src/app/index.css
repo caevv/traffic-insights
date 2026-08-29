@@ -1,10 +1,9 @@
 /*
- * Design tokens and app shell.
+ * Design tokens and the app shell.
  *
- * Every colour, radius and space value used anywhere in the app is declared
- * here as a custom property. Components reference tokens, never literals, so
- * the dark theme below is a single block of overrides rather than a parallel
- * stylesheet that drifts.
+ * Every colour, radius and spacing value in the app is a custom property here.
+ * Components use the tokens, never raw values, so the dark theme below is one
+ * block of overrides instead of a second stylesheet that drifts out of sync.
  */
 
 :root {
@@ -32,8 +31,8 @@
   --success: #067a52;
 
   /*
-   * Categorical data-visualisation palette. Six hues, chosen to stay
-   * distinguishable from one another at small sizes and against both themes.
+   * Chart colours. Six hues, picked so they stay apart from each other at
+   * small sizes and in both themes.
    */
   --series-1: #4f46e5;
   --series-2: #e8880a;
@@ -153,14 +152,14 @@ p {
   margin: 0;
 }
 
-/* Visible focus for every interactive element, keyboard users included. */
+/* Visible focus on everything clickable, so keyboard users can see it. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Honour a reader's reduced-motion preference across the whole app. */
+/* Respect the reduced-motion setting across the whole app. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -237,8 +236,8 @@ p {
 
 .chart-grid {
   display: grid;
-  /* Country chart is wider than the mix chart: it carries 16 categories
-     against the mix chart's 6, so it needs the horizontal room. */
+  /* The country chart is wider. It has 16 bars against the mix chart's 6, so
+     it needs the room. */
   grid-template-columns: 1.55fr 1fr;
   gap: var(--space-4);
 }
@@ -259,8 +258,8 @@ p {
   gap: var(--space-4);
 }
 
-/* The whole dashboard dims while a filter change is still resolving, which
-   tells the reader the numbers on screen are one step behind their input. */
+/* The dashboard dims while a filter change is still loading, so you can see
+   the numbers on screen are a step behind what you clicked. */
 .is-stale {
   opacity: 0.55;
   transition: opacity 160ms ease-out;

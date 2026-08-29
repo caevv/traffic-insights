@@ -11,9 +11,9 @@ import { EXPECTED, FIXTURE_WINDOW, seedFixtures } from '../helpers/fixtures.ts'
 /**
  * The aggregate queries, against real PostgreSQL.
  *
- * These are the highest-value tests in the repository: the aggregates ARE the
- * product, and every one of them is SQL. See `helpers/fixtures.ts` for the
- * four-row dataset and the arithmetic behind each expected number.
+ * These are the most important tests here. The aggregates are the product, and
+ * all of them are SQL. See helpers/fixtures.ts for the four-row dataset and
+ * the maths behind each expected number.
  */
 describe('traffic aggregates', () => {
   let db: TestDatabase
@@ -50,7 +50,7 @@ describe('traffic aggregates', () => {
         countries: ['DE'],
       })
 
-      // 44.0 (weighted) vs 53.3 (a plain average of the three hourly figures).
+      // 44.0 weighted, vs 53.3 for a plain average of the three hours.
       expect(germany?.avgSpeedKph).toBe(EXPECTED.germany.weightedSpeed)
       expect(germany?.avgSpeedKph).not.toBeCloseTo(53.3, 1)
     })
@@ -63,8 +63,8 @@ describe('traffic aggregates', () => {
     })
 
     it('treats the time window as half-open, [from, to)', async () => {
-      // `to` lands exactly on the 09:00 row. Half-open means that row is
-      // excluded, leaving only the two 08:00 rows for Germany (100 + 100).
+      // `to` sits exactly on the 09:00 row, and `to` is excluded. That
+      // leaves the two 08:00 rows for Germany (100 + 100).
       const rows = await getTrafficByCountry(db.pool, {
         countries: ['DE'],
         from: new Date('2024-01-15T08:00:00Z'),
@@ -121,7 +121,7 @@ describe('traffic aggregates', () => {
       const rows = await getTrafficByHour(db.pool, {})
 
       // Berlin and Paris are UTC+1 in January, so 08:00Z is local hour 9.
-      // A UTC implementation would return hours 8 and 9 instead.
+      // Doing it in UTC would give hours 8 and 9 instead.
       expect(
         rows.map(({ hour, vehicleCount }) => ({ hour, vehicleCount })),
       ).toEqual([...EXPECTED.localHours])

@@ -14,20 +14,19 @@ import type {
 const HOUR_MS = 60 * 60 * 1000
 
 /**
- * Snap a filter's start time down to the top of the hour.
+ * Round a filter's start time down to the top of the hour.
  *
  * This is the difference between a cache that works and one that never hits.
- * A raw `Date.now() - 7 days` produces a different millisecond on every
- * render, so every render would be a new query key, a new URL, a cache miss in
- * TanStack Query, and a miss on the server's `Cache-Control` too. Snapping to
- * the hour makes the key stable for an hour at a time — and the underlying
- * data has hourly grain anyway, so nothing is lost.
+ * A plain `Date.now() - 7 days` gives a different millisecond every render, so
+ * every render would make a new query key, a new URL, a miss in TanStack Query
+ * and a miss on the server's Cache-Control too. Rounding to the hour keeps the
+ * key stable for an hour. The data is hourly anyway, so we lose nothing.
  */
 function startOfHour(epochMs: number): string {
   return new Date(Math.floor(epochMs / HOUR_MS) * HOUR_MS).toISOString()
 }
 
-/** Build the query string shared by every aggregate endpoint. */
+/** Build the query string that every aggregate endpoint uses. */
 export function toQuery(filters: DashboardFilters): string {
   const params = new URLSearchParams()
 

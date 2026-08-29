@@ -3,18 +3,18 @@ import './Card.css'
 
 type CardProps = {
   title: string
-  /** Short line under the title explaining what the reader is looking at. */
+  /** Short line under the title saying what you're looking at. */
   description?: string
-  /** Filter chips, toggles — anything that acts on this card's content. */
+  /** Chips, toggles, anything that acts on this card's content. */
   actions?: ReactNode
   children: ReactNode
   className?: string
 }
 
 /**
- * The single panel primitive. Every section of the dashboard is one of these,
- * so heading levels, padding and borders stay consistent without each chart
- * re-deciding them.
+ * The one panel component. Every section of the dashboard uses it, so heading
+ * levels, padding and borders stay the same without each chart deciding for
+ * itself.
  */
 export function Card({
   title,

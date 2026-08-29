@@ -18,13 +18,13 @@ import {
 import type { DashboardFilters, RecordDraft, TrafficRecord } from '../types'
 
 /**
- * Query keys are built from one factory rather than written inline.
+ * Query keys come from one factory, not written inline.
  *
- * Inline key arrays are how cache bugs happen: a mutation invalidates
- * `['traffic','summary']` while the query registered
- * `['traffic','summary',filters]`, the invalidation silently matches nothing,
- * and the chart shows stale numbers with no error anywhere. One factory means
- * the writer and the reader cannot disagree.
+ * Inline key arrays are how cache bugs happen. A mutation invalidates
+ * ['traffic','summary'] but the query registered
+ * ['traffic','summary',filters], the invalidation matches nothing, and the
+ * chart shows old numbers with no error anywhere. One factory means the writer
+ * and the reader can't disagree.
  */
 const trafficKeys = {
   all: ['traffic'] as const,
@@ -42,9 +42,9 @@ const trafficKeys = {
 }
 
 /**
- * Reference data changes on the order of never, so it is effectively static
- * for the life of the session. Anything else would refetch the country list
- * every time the window regains focus, for nothing.
+ * Reference data basically never changes, so treat it as fixed for the
+ * session. Otherwise we'd refetch the country list every time the window gets
+ * focus, for nothing.
  */
 export function useReference() {
   return useQuery({
@@ -100,13 +100,13 @@ export type RecordMutations = {
 }
 
 /**
- * Writes invalidate the whole `traffic` key space.
+ * A write invalidates every `traffic` key.
  *
- * A new record shifts the country totals, the vehicle mix, the hourly curve
- * and the summary at once, so surgical invalidation would buy a rounding error
- * of network traffic in exchange for a real risk of leaving one chart
- * disagreeing with the others. Broad invalidation keeps the dashboard
- * internally consistent, which is the property that actually matters here.
+ * One new record moves the country totals, the vehicle mix, the hourly curve
+ * and the summary all at once. Being clever about which keys to invalidate
+ * would save a tiny bit of network and risk leaving one chart disagreeing with
+ * the others. Invalidating everything keeps the dashboard consistent, which is
+ * what matters here.
  */
 export function useRecordMutations(): RecordMutations {
   const queryClient = useQueryClient()

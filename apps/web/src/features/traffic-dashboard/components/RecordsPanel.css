@@ -49,7 +49,7 @@
   font-size: 12.5px;
 }
 
-/* The table scrolls inside its own box; the page must never scroll sideways. */
+/* The table scrolls in its own box. The page never scrolls sideways. */
 .records__scroll {
   overflow-x: auto;
 }

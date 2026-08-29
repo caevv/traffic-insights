@@ -4,7 +4,7 @@ import { migrate } from '../../src/db/migrator.ts'
 
 const { Pool, types } = pg
 
-// Match the production parsers so tests observe the same types the API returns.
+// Same parsers as production, so tests see the types the API really returns.
 types.setTypeParser(types.builtins.INT8, (value) => Number.parseInt(value, 10))
 types.setTypeParser(types.builtins.NUMERIC, (value) => Number.parseFloat(value))
 types.setTypeParser(types.builtins.DATE, (value) => value)
@@ -17,17 +17,17 @@ export type TestDatabase = {
 }
 
 /**
- * Create a throwaway, fully migrated database for one test file.
+ * Make a throwaway, migrated database for one test file.
  *
- * Tests run against real PostgreSQL, never a mock. A mocked `pg` would happily
- * confirm that we called `query()` with a string containing "GROUP BY" while
- * proving exactly nothing about whether the grouping, the weighted average or
- * the timezone conversion produce the right numbers — which is the only thing
- * these queries need to be right about.
+ * Tests run against real PostgreSQL, never a mock. A mocked pg would happily
+ * confirm we called query() with a string containing "GROUP BY" and prove
+ * nothing about whether the grouping, the weighted average or the timezone
+ * conversion give the right numbers. That's the only thing these queries have
+ * to get right.
  *
- * A database per test FILE (rather than per test, or one shared) is the sweet
- * spot: files run in parallel without seeing each other's writes, and each
- * pays the ~200ms of CREATE DATABASE plus migrations only once.
+ * One database per test FILE, not per test and not one shared. Files run in
+ * parallel without seeing each other's writes, and each pays for CREATE
+ * DATABASE plus migrations once.
  */
 export async function createTestDatabase(label: string): Promise<TestDatabase> {
   const adminUrl = process.env.DATABASE_URL
@@ -39,10 +39,9 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
 
   const admin = new Pool({ connectionString: adminUrl, max: 1 })
   try {
-    // A database IDENTIFIER cannot be a bound parameter in SQL, so this is
-    // the one place in the repository that builds a statement by
-    // concatenation. `name` comes from a random hex suffix plus a label
-    // scrubbed to [a-z0-9_] above — never from external input.
+    // A database name can't be a bound parameter in SQL, so this is the one
+    // place we build a statement by concatenation. `name` is a random hex
+    // suffix plus a label scrubbed to [a-z0-9_] above. Never outside input.
     // eslint-disable-next-line no-restricted-syntax
     await admin.query(`CREATE DATABASE "${name}"`)
   } finally {
@@ -73,11 +72,11 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
 }
 
 /**
- * Insert a traffic record by country and vehicle type CODE.
+ * Insert a record using country and vehicle type CODES.
  *
- * Fixtures read as domain facts ("Germany, cars, 08:00, 100 vehicles") rather
- * than as foreign keys, so a failing assertion can be checked against the
- * fixture table by eye.
+ * Fixtures read like facts ("Germany, cars, 08:00, 100 vehicles") instead of
+ * foreign keys, so you can check a failing test against the fixture table by
+ * eye.
  */
 export async function insertRecord(
   pool: pg.Pool,

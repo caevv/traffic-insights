@@ -1,23 +1,22 @@
--- Generate a realistic hourly traffic dataset.
+-- Build a realistic hourly traffic dataset.
 --
--- $1 :: int — days of history to generate, ending at the current hour.
+-- $1 :: int, days of history to make, ending at the current hour.
 --
--- The whole dataset is built by Postgres in one statement. Nothing is
--- generated in Node and shipped over the wire: 16 countries x 6 vehicle types
--- x 24 hours x N days is ~207k rows at the default 90 days, and round-tripping
--- those through the driver would take orders of magnitude longer than letting
--- the database cross-join them in place.
+-- Postgres builds the whole thing in one statement. Nothing is generated in
+-- Node and pushed over the wire. That's 16 countries x 6 vehicle types x 24
+-- hours x 90 days, about 207k rows, and sending those through the driver would
+-- be much slower than letting the database cross-join them in place.
 --
--- The numbers are synthetic but not arbitrary. Four effects are modelled so the
--- charts show structure a reviewer can sanity-check rather than uniform noise:
+-- The numbers are made up but not random. We model four things so the charts
+-- show real shapes you can sanity check, not just noise:
 --
---   1. Commuter rhythm  — twin peaks around 08:00 and 17:30 LOCAL time.
---   2. Freight rhythm   — flatter, running overnight, against the commuter tide.
---   3. Weekend effect   — cars and freight fall, bicycles and motorcycles rise.
---   4. Congestion       — average speed falls as volume rises.
+--   1. Commuters. Two peaks, around 08:00 and 17:30 local time.
+--   2. Freight. Flatter, runs overnight, goes against the commuter flow.
+--   3. Weekends. Cars and trucks drop, bikes go up.
+--   4. Congestion. Speed drops as volume rises.
 --
--- `local_hour` is derived per country via `AT TIME ZONE c.timezone`, so peaks
--- align across zones and DST is handled by Postgres' own tz database.
+-- local_hour comes from `AT TIME ZONE c.timezone`, so peaks line up across
+-- zones and Postgres handles DST for us.
 
 WITH params AS (
     SELECT
@@ -25,8 +24,8 @@ WITH params AS (
         date_trunc('hour', now())                                  AS end_at
 ),
 
--- Relative hourly volume per country. Loosely tracks road-network scale, not
--- population: Singapore is small but dense, Kenya large but less motorised.
+-- Rough hourly volume per country. Follows road network size more than
+-- population. Singapore is small but dense, Kenya is big but has fewer cars.
 country_weight (iso_code, weight) AS (
     VALUES
         ('US', 1.00), ('IN', 0.94), ('BR', 0.66), ('JP', 0.62),
@@ -35,10 +34,10 @@ country_weight (iso_code, weight) AS (
         ('NL', 0.24), ('AE', 0.21), ('SG', 0.17), ('KE', 0.15)
 ),
 
--- share          : fraction of all vehicles on the road
--- commuter_bias  : 1.0 = pure commuter rhythm, 0.0 = pure freight rhythm
--- weekend_factor : multiplier applied Saturday and Sunday
--- base_speed     : free-flow average speed in km/h
+-- share          : how much of all traffic this type is
+-- commuter_bias  : 1.0 = full commuter pattern, 0.0 = full freight pattern
+-- weekend_factor : multiplier for Saturday and Sunday
+-- base_speed     : average speed with an empty road, km/h
 vehicle_profile (code, share, commuter_bias, weekend_factor, base_speed) AS (
     VALUES
         ('car',        0.47, 1.00, 0.72,  64.0),
@@ -83,14 +82,14 @@ shaped AS (
         weight,
         local_dow,
         progress,
-        -- Twin commuter peaks plus a lunchtime bump, on a low overnight floor.
+        -- Two commuter peaks and a small lunch bump, over a quiet night.
         (
             0.16
             + 0.95 * exp(-power(local_hour -  8.0, 2) / 4.5)
             + 1.00 * exp(-power(local_hour - 17.5, 2) / 6.0)
             + 0.30 * exp(-power(local_hour - 12.5, 2) / 9.0)
         ) AS commuter_shape,
-        -- Freight: broad daytime plateau with a pronounced overnight run.
+        -- Freight: flat through the day, busier overnight.
         (
             0.52
             + 0.46 * exp(-power(local_hour - 22.5, 2) / 22.0)
@@ -106,12 +105,12 @@ modelled AS (
         vehicle_type_id,
         recorded_at,
         base_speed,
-        -- Blend the two rhythms according to how commuter-like the vehicle is.
+        -- Mix the two patterns based on how commuter-like the vehicle is.
         (commuter_shape * commuter_bias + freight_shape * (1 - commuter_bias)) AS shape,
         weight,
         share,
         CASE WHEN local_dow >= 6 THEN weekend_factor ELSE 1.0 END AS weekend,
-        -- Mild secular growth across the window, so the trend line has a slope.
+        -- Slight growth over the window so there is a trend to see.
         (1.0 + 0.14 * progress)                                   AS trend,
         (0.88 + random() * 0.24)                                  AS noise,
         (0.97 + random() * 0.06)                                  AS speed_noise
@@ -128,8 +127,8 @@ SELECT
         0,
         round(4200 * weight * share * shape * weekend * trend * noise)
     )::int AS vehicle_count,
-    -- Congestion: speed decays as the volume shape rises, floored so the
-    -- CHECK constraint (0 < speed <= 300) can never be violated.
+    -- Speed drops as volume rises. Clamped so the CHECK constraint
+    -- (0 < speed <= 300) can never fail.
     round(
         LEAST(
             300.0,
@@ -138,6 +137,6 @@ SELECT
         2
     ) AS avg_speed_kph
 FROM modelled
--- Idempotent: re-running the seed tops up missing hours instead of failing or
--- double counting. The natural key does the work.
+-- Running this again just fills in the missing hours. It won't fail and it
+-- won't double count. The natural key handles that.
 ON CONFLICT (country_id, vehicle_type_id, recorded_at) DO NOTHING;

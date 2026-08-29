@@ -1,12 +1,12 @@
 /**
- * Vehicle type colours, keyed by the type's own code — never by array index.
+ * Vehicle type colours, keyed by the code. Never by array index.
  *
- * The API orders vehicle types by volume, so an index-based palette would
- * repaint every slice whenever a filter changed the ranking. A legend whose
- * colours move under the reader is worse than no legend at all.
+ * The API sorts vehicle types by volume, so index-based colours would repaint
+ * every slice whenever a filter changed the order. A legend whose colours move
+ * around is worse than no legend.
  *
- * This lives in its own module rather than beside the chart so the chart file
- * exports components only, which is what keeps Vite's Fast Refresh working.
+ * This sits in its own file so the chart file only exports components, which
+ * is what keeps Vite's Fast Refresh working.
  */
 const VEHICLE_COLORS: Record<string, string> = {
   car: 'var(--series-1)',

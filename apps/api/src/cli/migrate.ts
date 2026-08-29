@@ -1,9 +1,9 @@
 /**
- * Apply pending database migrations, then exit.
+ * Run any pending migrations, then exit.
  *
- * Run standalone (`npm run db:migrate`) or as the API container's start-up
- * step. Either way the exit code is the contract: 0 means the schema is at
- * head, non-zero means do not start serving traffic.
+ * Works on its own (`npm run db:migrate`) or as a container start-up step.
+ * Either way the exit code is what matters: 0 means the schema is up to date,
+ * anything else means don't start serving.
  */
 import { migrate } from '../db/migrator.ts'
 import { pool } from '../db/pool.ts'

@@ -3,38 +3,32 @@ import { env } from '../config/env.ts'
 
 const { Pool, types } = pg
 
-/**
- * node-postgres returns `bigint` (OID 20) and `numeric` (OID 1700) as strings
- * because they can exceed IEEE-754 precision. Our aggregates are bounded well
- * inside `Number.MAX_SAFE_INTEGER` (a SUM of daily vehicle counts), so we parse
- * them into numbers here rather than sprinkling `Number(...)` across the
- * repository and risking one place that forgets.
- */
+// pg returns bigint and numeric as strings, because they can be bigger than a
+// JS number can hold. Our sums are daily vehicle counts, nowhere near that
+// limit, so we parse them here. Otherwise SUM() comes back as "48213" and the
+// charts get a string where they want a number.
 types.setTypeParser(types.builtins.INT8, (value) => Number.parseInt(value, 10))
 types.setTypeParser(types.builtins.NUMERIC, (value) => Number.parseFloat(value))
 
-/**
- * `DATE` (OID 1082) is parsed to a JS Date by default, which silently shifts
- * the day when the process runs in a non-UTC timezone. A calendar date has no
- * timezone; keep it as the `YYYY-MM-DD` string Postgres sent.
- */
+// DATE would be parsed into a JS Date, which shifts the day if the process
+// runs outside UTC. A calendar date has no timezone, so keep the string.
 types.setTypeParser(types.builtins.DATE, (value) => value)
 
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: env.PG_POOL_MAX,
-  // Bound how long a single query may pin a pool connection. Without this one
-  // slow query can starve every other request during a traffic spike.
+  // Stops one slow query from holding a connection forever and starving
+  // everything else during a spike.
   statement_timeout: env.PG_STATEMENT_TIMEOUT_MS,
-  // Recycle idle connections so a restarted/failed-over Postgres does not leave
-  // the pool holding dead sockets.
+  // Drop idle connections so we don't keep dead sockets after Postgres
+  // restarts or fails over.
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
 })
 
 export type Db = pg.Pool
 
-/** Convenience wrapper: run a parameterised query and get typed rows back. */
+/** Run a parameterised query and get typed rows back. */
 export async function query<T extends pg.QueryResultRow>(
   db: Db,
   text: string,

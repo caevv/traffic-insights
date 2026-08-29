@@ -17,12 +17,12 @@ const CHART_HEIGHT = 420
 const BAR_RADIUS: [number, number, number, number] = [0, 4, 4, 0]
 
 /**
- * View model: the wire type plus one presentational field.
+ * The API type plus one field for display.
  *
- * The per-bar opacity travels IN THE DATA rather than through a closure. That
- * is what lets the shape renderer below live at module scope — a shape defined
- * inside the chart component would be a new component type on every render,
- * and Recharts would remount every bar on every keystroke of a filter.
+ * The per-bar opacity rides along IN THE DATA instead of in a closure. That's
+ * what lets the shape renderer below sit at module level. A shape defined
+ * inside the chart component would be a new component type every render, and
+ * Recharts would remount every bar on every filter change.
  */
 type CountryBar = CountryTraffic & { emphasis: number }
 
@@ -56,7 +56,7 @@ type CountryBarShapeProps = {
   payload?: CountryBar
 }
 
-/** Replaces the deprecated `<Cell>`: Recharts 3 customises per-datum via `shape`. */
+/** Recharts 3 deprecated <Cell>. Per-row styling goes through `shape` now. */
 function CountryBarShape({
   x = 0,
   y = 0,
@@ -80,24 +80,24 @@ function CountryBarShape({
 
 type CountryTrafficChartProps = {
   data: CountryTraffic[]
-  /** Codes currently selected. Empty means "no country filter applied". */
+  /** Selected codes. Empty means no country filter. */
   selected: string[]
   onSelect: (countryCode: string) => void
 }
 
 /**
- * Country-wise traffic volume — one of the two required graphs.
+ * Country traffic. One of the two charts the task asks for.
  *
- * Horizontal bars rather than vertical: with 16 countries, vertical bars force
- * rotated labels, and comparing bar lengths against a common baseline is the
- * entire reason to use a bar chart.
+ * Horizontal bars, not vertical. With 16 countries, vertical bars mean tilted
+ * labels, and comparing lengths from a shared baseline is the whole point of a
+ * bar chart.
  *
- * Clicking a bar toggles that country in the dashboard-wide filter, which is
- * what makes this a control rather than a picture.
+ * Clicking a bar toggles that country in the filter, which is what makes this
+ * a control and not just a picture.
  *
- * `memo` earns its place here: the parent re-renders whenever ANY sibling
- * query settles, and rebuilding 16 SVG bar groups for a change this chart's
- * props did not reflect is wasted work on every interaction.
+ * memo is worth it here. The parent re-renders whenever any other query
+ * finishes, and rebuilding 16 SVG bar groups for a change this chart didn't
+ * see is wasted work on every click.
  */
 export const CountryTrafficChart = memo(function CountryTrafficChart({
   data,
@@ -108,8 +108,8 @@ export const CountryTrafficChart = memo(function CountryTrafficChart({
     const hasSelection = selected.length > 0
     return data.map((entry) => ({
       ...entry,
-      // Unselected bars fade rather than disappear: keeping them on screen
-      // preserves the sense of scale that makes the selected ones meaningful.
+      // Unselected bars fade instead of vanishing. Keeping them on screen
+      // keeps the sense of scale that makes the selected ones mean something.
       emphasis:
         !hasSelection || selected.includes(entry.countryCode) ? 1 : 0.26,
     }))
@@ -144,10 +144,10 @@ export const CountryTrafficChart = memo(function CountryTrafficChart({
         />
         <Bar
           dataKey="vehicleCount"
-          // Without a cap, filtering down to one country turns its bar into a
-          // 420px-tall block: Recharts gives each category the full band, so
-          // fewer categories means fatter bars. A ceiling keeps the chart
-          // looking the same whether it shows sixteen bars or one.
+          // Without a cap, filtering to one country turns its bar into a
+          // 420px block. Recharts gives each category the full band, so fewer
+          // categories means fatter bars. A max keeps the chart looking the
+          // same with sixteen bars or one.
           maxBarSize={26}
           shape={<CountryBarShape />}
           isAnimationActive={false}

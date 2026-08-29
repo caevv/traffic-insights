@@ -15,10 +15,10 @@ export default defineConfig([
       ecmaVersion: 2023,
       sourceType: 'module',
       globals: globals.node,
-      // Pinned explicitly: the pre-commit hook lints files from BOTH
-      // workspaces in a single run from the repo root, and typescript-eslint
-      // cannot choose between two candidate roots on its own. Without this,
-      // every file fails to parse depending on where eslint was invoked.
+      // Set on purpose. The pre-commit hook lints files from BOTH workspaces
+      // in one run from the repo root, and typescript-eslint can't pick
+      // between two roots by itself. Without this, files fail to parse
+      // depending on where eslint was run from.
       parserOptions: {
         tsconfigRootDir: import.meta.dirname,
       },
@@ -30,8 +30,8 @@ export default defineConfig([
         'warn',
         { vars: 'all', varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
       ],
-      // Every SQL string in this codebase is a parameterised query. Template
-      // literals that interpolate user input into SQL are a bug, not a style.
+      // Every SQL string here uses bound parameters. A template literal that
+      // drops a value straight into SQL is a bug, not a style choice.
       'no-restricted-syntax': [
         'error',
         {

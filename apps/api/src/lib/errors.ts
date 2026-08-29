@@ -1,9 +1,9 @@
 /**
- * Domain errors.
+ * App errors.
  *
- * The repository throws these; a single Fastify error handler maps them to
- * status codes. Keeping HTTP concerns out of the data layer means the same
- * repository is usable from the CLI and from tests without a request object.
+ * The repository throws these and one Fastify handler turns them into status
+ * codes. Keeping HTTP out of the data layer means the same repository works
+ * from the CLI and from tests, with no request object needed.
  */
 
 export type ErrorCode =
@@ -40,7 +40,7 @@ export class ConflictError extends AppError {
   }
 }
 
-/** Syntactically valid but semantically rejected — e.g. an unknown country. */
+/** Well-formed but we still say no, like an unknown country code. */
 export class UnprocessableError extends AppError {
   constructor(message: string, details?: unknown) {
     super('UNPROCESSABLE', 422, message, details)

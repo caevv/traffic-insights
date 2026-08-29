@@ -14,7 +14,7 @@ const INITIAL_FILTERS: DashboardFilters = {
   vehicleTypes: [],
 }
 
-/** Add `value` if absent, remove it if present. Never mutates the input. */
+/** Add the value if it's missing, remove it if it's there. No mutation. */
 function toggle(list: string[], value: string): string[] {
   return list.includes(value)
     ? list.filter((item) => item !== value)
@@ -31,16 +31,15 @@ export type DashboardFilterControls = {
 }
 
 /**
- * Owns the dashboard's filter state and the only ways to change it.
+ * Holds the dashboard filter state and the only ways to change it.
  *
- * Every updater uses the functional form of `setState`. With cross-filtering,
- * two toggles can be dispatched from the same tick — clicking a bar while a
- * chip click is still queued — and the closure form would compute both from
- * the same stale snapshot, silently dropping one.
+ * Every updater uses the function form of setState. With cross-filtering, two
+ * toggles can fire in the same tick, like clicking a bar while a chip click is
+ * still queued. The closure form would work both out from the same old
+ * snapshot and quietly drop one.
  *
- * The updaters are `useCallback`-stable so the memoised chart components below
- * are not re-rendered by a new function identity every time the parent
- * re-renders for an unrelated reason.
+ * The updaters are wrapped in useCallback so the memoised charts below don't
+ * re-render just because the parent re-rendered for some unrelated reason.
  */
 export function useDashboardFilters(): DashboardFilterControls {
   const [filters, setFilters] = useState<DashboardFilters>(INITIAL_FILTERS)
@@ -65,8 +64,8 @@ export function useDashboardFilters(): DashboardFilterControls {
 
   const reset = useCallback(() => setFilters(INITIAL_FILTERS), [])
 
-  // Derived during render, not stored in state — storing it would let it drift
-  // out of step with `filters` for exactly one render.
+  // Worked out during render, not kept in state. In state it could fall out
+  // of step with `filters` for one render.
   const isFiltered =
     filters.countries.length > 0 ||
     filters.vehicleTypes.length > 0 ||

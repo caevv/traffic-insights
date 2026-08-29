@@ -1,10 +1,9 @@
 import { z } from 'zod'
 
 /**
- * Configuration is validated once, at process start, and never read from
- * `process.env` again. A bad value crashes the process immediately with a
- * readable message instead of surfacing as a confusing runtime error under
- * load — fail fast at boot, not at request 10,000.
+ * Config is checked once at start-up and never read from process.env again.
+ * A bad value crashes right away with a clear message, instead of turning
+ * into a weird error later under load.
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
@@ -19,7 +18,7 @@ const envSchema = z.object({
   PG_POOL_MAX: z.coerce.number().int().positive().max(200).default(10),
   PG_STATEMENT_TIMEOUT_MS: z.coerce.number().int().nonnegative().default(5_000),
 
-  /** Comma-separated allowlist of browser origins. */
+  /** Comma-separated list of allowed browser origins. */
   CORS_ORIGIN: z
     .string()
     .default('http://localhost:8080')
@@ -33,7 +32,7 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   RATE_LIMIT_WINDOW: z.string().min(1).default('1 minute'),
 
-  /** Seconds of `Cache-Control: public, max-age=N` on aggregate endpoints. */
+  /** Seconds of `Cache-Control: public, max-age=N` on the aggregate routes. */
   AGGREGATE_CACHE_MAX_AGE: z.coerce.number().int().nonnegative().default(60),
 
   SEED_DAYS: z.coerce.number().int().positive().max(1_095).default(90),
@@ -56,5 +55,5 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   return parsed.data
 }
 
-/** Process-wide configuration. Import this, never `process.env`. */
+/** App config. Import this, not process.env. */
 export const env: Env = loadEnv()

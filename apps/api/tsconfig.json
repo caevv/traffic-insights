@@ -19,9 +19,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
 
-    /* Source imports carry the real `.ts` extension; the compiler rewrites
-       them to `.js` on emit. One spelling that is correct for tsx, for
-       vitest, and for the built output in `dist/`. */
+    /* Imports use the real .ts extension and the compiler rewrites them to
+       .js when it emits. One spelling that works for tsx, for vitest, and for
+       the built output in dist/. */
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
 

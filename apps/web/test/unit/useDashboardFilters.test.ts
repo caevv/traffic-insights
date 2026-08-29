@@ -27,10 +27,10 @@ describe('useDashboardFilters', () => {
   })
 
   /**
-   * Cross-filtering means a chip click and a chart click can land in the same
-   * tick. The functional form of `setState` is what stops the second update
-   * from being computed against the first one's stale snapshot — with a
-   * closure over `filters`, one of these two toggles would silently vanish.
+   * With cross-filtering, a chip click and a chart click can land in the same
+   * tick. The function form of setState is what stops the second update from
+   * being worked out against the first one's old snapshot. With a closure over
+   * `filters`, one of these two toggles would just disappear.
    */
   it('keeps both updates when two toggles happen in the same tick', () => {
     const { result } = renderHook(() => useDashboardFilters())

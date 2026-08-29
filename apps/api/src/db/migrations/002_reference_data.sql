@@ -1,12 +1,11 @@
--- Reference (dimension) data.
+-- Dimension data.
 --
--- These rows are part of the schema contract, not sample data: the API resolves
--- every incoming `country`/`vehicleType` against them and rejects anything
--- unlisted, and the seed generator cross-joins them to build the fact table.
--- They ship in a migration so dev, CI and production start from an identical
--- dimension set.
+-- This is part of the schema, not sample data. The API looks up every incoming
+-- country and vehicleType here and rejects anything that isn't listed, and the
+-- seed cross-joins these tables to build the fact table. Shipping them in a
+-- migration means dev, CI and production all start the same.
 --
--- ON CONFLICT DO NOTHING keeps the migration re-runnable.
+-- ON CONFLICT DO NOTHING so the migration can run again safely.
 
 INSERT INTO countries (iso_code, name, region, timezone) VALUES
     ('AE', 'United Arab Emirates', 'Middle East',   'Asia/Dubai'),

@@ -1,13 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Request and response contracts.
+ * Request and response shapes.
  *
- * These are not decoration: Fastify validates every request against them and
- * serialises every response through them. A field the schema does not declare
- * never reaches a client, so a column added to a SELECT cannot silently leak,
- * and the OpenAPI document at `/docs` is generated from these same objects and
- * therefore cannot drift from the implementation.
+ * These do real work. Fastify checks every request against them and sends
+ * every response through them. A field the schema doesn't list never reaches a
+ * client, so adding a column to a SELECT can't leak it by accident. The
+ * OpenAPI docs at /docs come from these same objects, so they can't drift.
  */
 
 // ---------------------------------------------------------------------------
@@ -27,10 +26,10 @@ const vehicleTypeCode = z
   .transform((code) => code.toLowerCase())
 
 /**
- * Accept `?countries=DE,FR,US` as a comma-separated list.
+ * Takes `?countries=DE,FR,US` as a comma-separated list.
  *
- * Capped at 64 entries so a hostile query string cannot make us build a
- * pathological `= ANY(...)` array.
+ * Capped at 64 so a nasty query string can't make us build a huge
+ * `= ANY(...)` array.
  */
 function commaSeparated<T extends z.ZodType<string, string>>(item: T) {
   return z
@@ -45,9 +44,9 @@ function commaSeparated<T extends z.ZodType<string, string>>(item: T) {
 }
 
 /**
- * The fact table's grain is one hour, so any instant is interpreted as the hour
- * it falls in. Truncating here — rather than rejecting — keeps the API honest
- * about its own resolution and guarantees the database CHECK can never fire.
+ * Data is hourly, so any timestamp is read as the hour it falls in. We round
+ * down instead of rejecting. That matches what the data means and makes sure
+ * the database CHECK can never fire.
  */
 const hourInstant = z.coerce
   .date()
@@ -108,24 +107,24 @@ const measures = {
     .int()
     .min(0)
     .max(2_000_000_000)
-    .describe('Vehicles observed during the hour'),
+    .describe('Vehicles counted during the hour'),
   avgSpeedKph: z
     .number()
     .gt(0)
     .max(300)
-    .describe('Mean speed during the hour, km/h'),
+    .describe('Average speed during the hour, km/h'),
 }
 
 export const createRecordSchema = z.object({
   country: countryCode,
   vehicleType: vehicleTypeCode,
   recordedAt: hourInstant.describe(
-    'Any ISO 8601 instant; truncated to the hour it falls in',
+    'Any ISO 8601 timestamp. Rounded down to its hour.',
   ),
   ...measures,
 })
 
-/** PATCH semantics: every field optional, at least one present. */
+/** PATCH: every field optional, but you need at least one. */
 export const updateRecordSchema = z
   .object({
     country: countryCode.optional(),

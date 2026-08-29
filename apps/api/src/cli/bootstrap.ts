@@ -1,14 +1,12 @@
 /**
- * Prepare a database for serving: migrate to head, then seed if it is empty.
+ * Get a database ready to serve: migrate, then seed it if it's empty.
  *
- * This is the container start-up step. It exists so that `docker compose up` on
- * a fresh clone yields a populated dashboard with no manual `psql` anywhere in
- * the setup instructions — the single most common way a reviewer's first run of
- * a project fails.
+ * This is the container start-up step. It's here so `docker compose up` on a
+ * fresh clone gives you a dashboard with data, with no manual psql step in the
+ * README. That step is the usual reason a first run fails.
  *
- * Seeding is conditional on the fact table being empty rather than
- * unconditional, so restarting the stack never overwrites data someone entered
- * through the UI.
+ * We only seed when the table is empty, so restarting the stack never wipes
+ * data someone typed into the UI.
  */
 import { env } from '../config/env.ts'
 import { migrate } from '../db/migrator.ts'
@@ -28,7 +26,7 @@ async function main(): Promise<void> {
     return
   }
 
-  console.log(`Empty database — seeding ${env.SEED_DAYS} day(s) of traffic...`)
+  console.log(`Empty database. Seeding ${env.SEED_DAYS} day(s) of traffic...`)
   const startedAt = performance.now()
   const { total } = await seed(pool, { days: env.SEED_DAYS })
   console.log(

@@ -21,7 +21,7 @@ import type { HourlyTraffic } from '../types'
 
 const CHART_HEIGHT = 300
 
-/** Commuter windows, shaded to explain the twin peaks without a paragraph. */
+/** Commuter windows, shaded so the two peaks explain themselves. */
 const PEAK_WINDOWS = [
   { id: 'morning', from: 6.5, to: 9.5, label: 'Morning peak' },
   { id: 'evening', from: 16, to: 19, label: 'Evening peak' },
@@ -60,16 +60,16 @@ type HourlyRhythmChartProps = {
 }
 
 /**
- * Traffic rhythm by local hour of day — the third, exploratory graph.
+ * Traffic by local hour of day. The third chart, the exploratory one.
  *
- * Two series on two axes, because the story is the RELATIONSHIP between them:
- * volume peaks at the commute, and mean speed dips in the same hours. Plotting
- * either alone shows a curve; plotting both shows congestion.
+ * Two series on two axes, because the interesting part is how they relate.
+ * Volume peaks at commute time and speed drops in the same hours. Either one
+ * alone is just a curve. Both together show congestion.
  *
  * The hour buckets come from `recorded_at AT TIME ZONE countries.timezone`, so
- * 08:00 in Berlin and 08:00 in Tokyo land in the same bucket. Bucketing by UTC
- * instead would smear sixteen rush hours across the day and flatten the very
- * shape this chart exists to show.
+ * 08:00 in Berlin and 08:00 in Tokyo end up in the same bucket. Using UTC
+ * would smear sixteen rush hours across the day and flatten the exact shape
+ * this chart exists to show.
  */
 export const HourlyRhythmChart = memo(function HourlyRhythmChart({
   data,
@@ -134,9 +134,9 @@ export const HourlyRhythmChart = memo(function HourlyRhythmChart({
         <YAxis
           yAxisId="speed"
           orientation="right"
-          // A speed axis anchored at zero would compress the dip into a flat
-          // line. `dataMin - 6` keeps the variation legible; the axis is
-          // labelled in km/h so the non-zero baseline cannot mislead.
+          // A speed axis starting at zero would squash the dip into a flat
+          // line. `dataMin - 6` keeps it readable. The axis is labelled in
+          // km/h, so the non-zero baseline can't mislead anyone.
           domain={['dataMin - 6', 'dataMax + 6']}
           tickFormatter={(value: number) => `${Math.round(value)}`}
           tick={{ fill: 'var(--axis-text)', fontSize: 11 }}

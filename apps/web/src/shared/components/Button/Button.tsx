@@ -13,8 +13,8 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      // Defaulting to type="button" rather than the HTML default of "submit"
-      // stops every button inside the record form from submitting it.
+      // Default to type="button". HTML defaults to "submit", which would
+      // make every button inside the record form submit it.
       type={type}
       className={`shared-button shared-button--${variant} ${className}`.trim()}
       {...props}

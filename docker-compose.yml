@@ -1,0 +1,109 @@
+# One command brings up everything, migrated and seeded:
+#
+#   docker compose up --build
+#
+# Then open http://localhost:8080 for the dashboard, or
+# http://localhost:3000/docs for the API docs. No psql step, and no order to
+# remember: migrate waits for Postgres to be healthy, and api waits for migrate
+# to exit 0.
+
+name: derq-traffic
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-derq}
+      POSTGRES_USER: ${POSTGRES_USER:-derq}
+      # Throwaway local default so a fresh clone works with no setup. It
+      # matches DATABASE_URL in .env. Override BOTH in .env.local (gitignored)
+      # for anything that isn't your own machine.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-derq_local_dev}
+      # Fixed collation so ORDER BY on country names is the same on your
+      # machine and in CI.
+      POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=en-US'
+    ports:
+      # Published so `npm run dev:api` on your machine can reach it. Bound to
+      # loopback only. Never put a database on 0.0.0.0. Set POSTGRES_PORT if
+      # 5432 is already used on your machine.
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      # Postgres 18 wants the mount at /var/lib/postgresql, not at
+      # .../postgresql/data. The image then puts the data in a version-named
+      # subfolder so pg_upgrade --link works without crossing a mount point.
+      # Mount the old path and PG 18 refuses to start.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      # pg_isready says yes during initdb, before the database can actually
+      # be used. Running a real query is the check that means something.
+      test:
+        [
+          'CMD-SHELL',
+          'psql -U "${POSTGRES_USER:-derq}" -d "${POSTGRES_DB:-derq}" -c "SELECT 1" || exit 1',
+        ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Runs once and exits. Migrates, and seeds only if the table is empty, so
+  # restarting the stack never wipes data you edited.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['node', 'dist/cli/bootstrap.js']
+    env_file:
+      - path: .env
+        required: true
+      - path: .env.local
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: true
+      - path: .env.local
+        required: false
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

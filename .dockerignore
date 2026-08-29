@@ -1,0 +1,22 @@
+# Keeps the build context small and the layer cache stable. Anything here is
+# never sent to the daemon, so touching it can't invalidate a layer.
+
+.git
+.github
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+
+# Secrets must never end up in an image layer. The runtime gets its config
+# from the environment, not from a file baked into the build.
+.env.local
+.env.*.local
+
+docs
+README.md
+*.md
+
+.vscode
+.idea
+.DS_Store

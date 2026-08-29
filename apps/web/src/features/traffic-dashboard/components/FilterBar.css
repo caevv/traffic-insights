@@ -1,0 +1,55 @@
+.filter-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-bar__group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.filter-bar__legend {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.filter-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-bar__reset {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* Nudges the button down so it sits level with the chip rows, not the
+     legends above them. */
+  padding-top: 18px;
+}
+
+@media (max-width: 1080px) {
+  .filter-bar__reset {
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+}

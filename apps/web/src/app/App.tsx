@@ -1,5 +1,11 @@
-import { HelloWorld } from '@/features/hello-world'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { TrafficDashboard } from '@/features/traffic-dashboard'
+import { queryClient } from './queryClient'
 
 export function App() {
-  return <HelloWorld />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TrafficDashboard />
+    </QueryClientProvider>
+  )
 }

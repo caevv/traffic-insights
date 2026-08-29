@@ -1,0 +1,135 @@
+.records {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.records__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.records__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.records__field select,
+.records__field input {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-strong);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  min-width: 140px;
+}
+
+.records__field--narrow input {
+  min-width: 96px;
+}
+
+.records__error {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 12.5px;
+}
+
+/* The table scrolls inside its own box; the page must never scroll sideways. */
+.records__scroll {
+  overflow-x: auto;
+}
+
+.records__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.records__caption {
+  caption-side: bottom;
+  text-align: left;
+  padding-top: var(--space-3);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.records__table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.records__table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.records__table tbody tr:hover td {
+  background: var(--surface-2);
+}
+
+.records__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.records__edit-trigger {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  background: none;
+  border: 1px dashed transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-strong);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.records__edit-trigger:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.records__inline-input {
+  font: inherit;
+  font-size: 13px;
+  width: 96px;
+  text-align: right;
+  padding: 2px 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+.records__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

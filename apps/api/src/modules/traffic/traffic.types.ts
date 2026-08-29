@@ -1,15 +1,20 @@
-/** Time window: from is included, to is not. Both are optional. */
-export type TimeWindow = {
-  from?: Date
-  to?: Date
-}
-
-/** The filters every aggregate endpoint takes. */
-export type TrafficFilter = TimeWindow & {
+/**
+ * The filters every aggregate endpoint takes. `from` is included, `to` is not.
+ *
+ * Each field is `?: T | undefined` rather than plain `?: T`. With
+ * `exactOptionalPropertyTypes` those are different types, and a parsed query
+ * string carries explicit `undefined` for anything the caller left out. Being
+ * explicit here means a handler can pass `request.query` straight through
+ * instead of rebuilding the object to strip the undefineds. Same reasoning as
+ * TrafficRecordPatch at the bottom of this file.
+ */
+export type TrafficFilter = {
+  from?: Date | undefined
+  to?: Date | undefined
   /** ISO country codes. Empty or missing means all countries. */
-  countries?: string[]
+  countries?: string[] | undefined
   /** Vehicle type codes. Empty or missing means all types. */
-  vehicleTypes?: string[]
+  vehicleTypes?: string[] | undefined
 }
 
 export type CountryTraffic = {
@@ -59,8 +64,8 @@ export type TrafficRecord = {
   updatedAt: string
 }
 
-export type Page<T> = {
-  items: T[]
+export type TrafficRecordPage = {
+  items: TrafficRecord[]
   total: number
   limit: number
   offset: number

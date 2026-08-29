@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { formatNumber, formatPercent, formatSpeed } from '@/shared/lib/format'
 import { TooltipShell } from './TooltipShell'
+import { tooltipDatum, type RechartsTooltipProps } from '../lib/tooltip'
 import { vehicleColor } from '../lib/palette'
 import type { VehicleTypeTraffic } from '../types'
 import './VehicleMixChart.css'
@@ -17,14 +18,9 @@ const CHART_HEIGHT = 300
 
 type VehicleSlice = VehicleTypeTraffic & { emphasis: number; color: string }
 
-type VehicleTooltipProps = {
-  active?: boolean
-  payload?: { payload: VehicleSlice }[]
-}
-
-function VehicleTooltip({ active, payload }: VehicleTooltipProps) {
-  const datum = payload?.[0]?.payload
-  if (!active || !datum) return null
+function VehicleTooltip(props: RechartsTooltipProps<VehicleSlice>) {
+  const datum = tooltipDatum(props)
+  if (!datum) return null
 
   return (
     <TooltipShell

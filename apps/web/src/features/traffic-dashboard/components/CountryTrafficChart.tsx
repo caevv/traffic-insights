@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import { formatCompact, formatNumber, formatSpeed } from '@/shared/lib/format'
 import { TooltipShell } from './TooltipShell'
+import { tooltipDatum, type RechartsTooltipProps } from '../lib/tooltip'
 import type { CountryTraffic } from '../types'
 
 const CHART_HEIGHT = 420
@@ -26,14 +27,9 @@ const BAR_RADIUS: [number, number, number, number] = [0, 4, 4, 0]
  */
 type CountryBar = CountryTraffic & { emphasis: number }
 
-type CountryTooltipProps = {
-  active?: boolean
-  payload?: { payload: CountryBar }[]
-}
-
-function CountryTooltip({ active, payload }: CountryTooltipProps) {
-  const datum = payload?.[0]?.payload
-  if (!active || !datum) return null
+function CountryTooltip(props: RechartsTooltipProps<CountryBar>) {
+  const datum = tooltipDatum(props)
+  if (!datum) return null
 
   return (
     <TooltipShell

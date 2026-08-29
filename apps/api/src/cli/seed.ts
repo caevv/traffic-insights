@@ -30,12 +30,11 @@ async function main(): Promise<void> {
   )
 
   const startedAt = performance.now()
-  const { inserted, total } = await seed(pool, { days, reset })
+  const { inserted } = await seed(pool, { days, reset })
   const elapsed = Math.round(performance.now() - startedAt)
 
   console.log(
-    `Inserted ${inserted.toLocaleString('en-US')} row(s) in ${elapsed}ms. ` +
-      `traffic_records now holds ${total.toLocaleString('en-US')} row(s).`,
+    `Inserted ${inserted.toLocaleString('en-US')} row(s) in ${elapsed}ms.`,
   )
 }
 

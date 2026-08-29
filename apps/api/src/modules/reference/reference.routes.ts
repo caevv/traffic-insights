@@ -14,20 +14,15 @@ export const referenceRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/reference',
     {
+      // Ten times the aggregate lifetime. This is dimension data, so it
+      // changes far less often than the numbers do.
+      config: { cacheSeconds: env.AGGREGATE_CACHE_MAX_AGE * 10 },
       schema: {
         tags: ['reference'],
         summary: 'Countries, vehicle types, and the extent of the dataset',
         response: { 200: referenceSchema },
       },
     },
-    async (_request, reply) => {
-      reply.header(
-        'Cache-Control',
-        env.AGGREGATE_CACHE_MAX_AGE > 0
-          ? `public, max-age=${env.AGGREGATE_CACHE_MAX_AGE * 10}`
-          : 'no-store',
-      )
-      return getReference(app.db)
-    },
+    async () => getReference(app.db),
   )
 }

@@ -13,23 +13,23 @@ describe('toQuery', () => {
     vi.useRealTimers()
   })
 
-  it('produces an empty string when nothing is filtered', () => {
-    expect(toQuery(NO_FILTERS)).toBe('')
+  it('produces no parameters when nothing is filtered', () => {
+    expect(toQuery(NO_FILTERS).toString()).toBe('')
   })
 
   it('joins selected codes with commas', () => {
-    const query = toQuery({
+    const params = toQuery({
       ...NO_FILTERS,
       countries: ['DE', 'FR'],
       vehicleTypes: ['car', 'truck'],
     })
 
-    expect(query).toContain('countries=DE%2CFR')
-    expect(query).toContain('vehicleTypes=car%2Ctruck')
+    expect(params.get('countries')).toBe('DE,FR')
+    expect(params.get('vehicleTypes')).toBe('car,truck')
   })
 
   it('omits `from` entirely for the all-time range', () => {
-    expect(toQuery({ ...NO_FILTERS, rangeDays: null })).not.toContain('from=')
+    expect(toQuery({ ...NO_FILTERS, rangeDays: null }).has('from')).toBe(false)
   })
 
   /**
@@ -45,10 +45,10 @@ describe('toQuery', () => {
       vi.useFakeTimers()
 
       vi.setSystemTime(new Date('2024-06-10T14:00:31Z'))
-      const atStartOfHour = toQuery({ ...NO_FILTERS, rangeDays: 7 })
+      const atStartOfHour = toQuery({ ...NO_FILTERS, rangeDays: 7 }).toString()
 
       vi.setSystemTime(new Date('2024-06-10T14:59:59Z'))
-      const nearEndOfHour = toQuery({ ...NO_FILTERS, rangeDays: 7 })
+      const nearEndOfHour = toQuery({ ...NO_FILTERS, rangeDays: 7 }).toString()
 
       expect(nearEndOfHour).toBe(atStartOfHour)
     })
@@ -57,24 +57,20 @@ describe('toQuery', () => {
       vi.useFakeTimers()
       vi.setSystemTime(new Date('2024-06-10T14:30:00Z'))
 
-      const params = new URLSearchParams(
-        toQuery({ ...NO_FILTERS, rangeDays: 7 }),
-      )
+      const params = toQuery({ ...NO_FILTERS, rangeDays: 7 })
 
       // 2024-06-10T14:00Z minus 7 days.
-      expect(params.get('?from') ?? params.get('from')).toBe(
-        '2024-06-03T14:00:00.000Z',
-      )
+      expect(params.get('from')).toBe('2024-06-03T14:00:00.000Z')
     })
 
     it('changes once the clock crosses into the next hour', () => {
       vi.useFakeTimers()
 
       vi.setSystemTime(new Date('2024-06-10T14:59:59Z'))
-      const beforeRollover = toQuery({ ...NO_FILTERS, rangeDays: 1 })
+      const beforeRollover = toQuery({ ...NO_FILTERS, rangeDays: 1 }).toString()
 
       vi.setSystemTime(new Date('2024-06-10T15:00:00Z'))
-      const afterRollover = toQuery({ ...NO_FILTERS, rangeDays: 1 })
+      const afterRollover = toQuery({ ...NO_FILTERS, rangeDays: 1 }).toString()
 
       expect(afterRollover).not.toBe(beforeRollover)
     })

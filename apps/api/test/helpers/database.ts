@@ -1,13 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import pg from 'pg'
 import { migrate } from '../../src/db/migrator.ts'
+import { registerTypeParsers } from '../../src/db/typeParsers.ts'
 
-const { Pool, types } = pg
+const { Pool } = pg
 
-// Same parsers as production, so tests see the types the API really returns.
-types.setTypeParser(types.builtins.INT8, (value) => Number.parseInt(value, 10))
-types.setTypeParser(types.builtins.NUMERIC, (value) => Number.parseFloat(value))
-types.setTypeParser(types.builtins.DATE, (value) => value)
+// The same parsers production uses, so tests see the types the API returns.
+registerTypeParsers()
 
 export type TestDatabase = {
   pool: pg.Pool

@@ -1,4 +1,12 @@
 import { z } from 'zod'
+import type {
+  CountryTraffic,
+  HourlyTraffic,
+  TrafficRecord,
+  TrafficRecordPage,
+  TrafficSummary,
+  VehicleTypeTraffic,
+} from './traffic.types.ts'
 
 /**
  * Request and response shapes.
@@ -48,17 +56,11 @@ function commaSeparated<T extends z.ZodType<string, string>>(item: T) {
  * down instead of rejecting. That matches what the data means and makes sure
  * the database CHECK can never fire.
  */
-const hourInstant = z.coerce
-  .date()
-  .refine(
-    (value) => !Number.isNaN(value.getTime()),
-    'Expected an ISO 8601 date',
-  )
-  .transform((value) => {
-    const truncated = new Date(value)
-    truncated.setUTCMinutes(0, 0, 0)
-    return truncated
-  })
+const hourInstant = z.coerce.date().transform((value) => {
+  const truncated = new Date(value)
+  truncated.setUTCMinutes(0, 0, 0)
+  return truncated
+})
 
 // ---------------------------------------------------------------------------
 // Query parameters
@@ -139,6 +141,13 @@ export const updateRecordSchema = z
 
 // ---------------------------------------------------------------------------
 // Responses
+//
+// Each one carries `satisfies z.ZodType<T>` against the type the repository
+// returns. The schema decides what actually reaches a client, so without this
+// adding a field to the repository type and forgetting the schema would drop
+// it from the response silently, with nothing failing anywhere. Now it fails
+// to compile. The dependency points this way on purpose: the wire format knows
+// about the domain type, not the other way round.
 // ---------------------------------------------------------------------------
 
 export const countryTrafficSchema = z.object({
@@ -147,7 +156,7 @@ export const countryTrafficSchema = z.object({
   region: z.string(),
   vehicleCount: z.number(),
   avgSpeedKph: z.number(),
-})
+}) satisfies z.ZodType<CountryTraffic>
 
 export const vehicleTypeTrafficSchema = z.object({
   vehicleType: z.string(),
@@ -155,13 +164,13 @@ export const vehicleTypeTrafficSchema = z.object({
   vehicleCount: z.number(),
   share: z.number(),
   avgSpeedKph: z.number(),
-})
+}) satisfies z.ZodType<VehicleTypeTraffic>
 
 export const hourlyTrafficSchema = z.object({
   hour: z.number().int().min(0).max(23),
   vehicleCount: z.number(),
   avgSpeedKph: z.number(),
-})
+}) satisfies z.ZodType<HourlyTraffic>
 
 export const trafficSummarySchema = z.object({
   totalVehicles: z.number(),
@@ -170,7 +179,7 @@ export const trafficSummarySchema = z.object({
   countryCount: z.number(),
   firstRecordedAt: z.string().nullable(),
   lastRecordedAt: z.string().nullable(),
-})
+}) satisfies z.ZodType<TrafficSummary>
 
 export const trafficRecordSchema = z.object({
   id: z.number(),
@@ -182,14 +191,14 @@ export const trafficRecordSchema = z.object({
   vehicleCount: z.number(),
   avgSpeedKph: z.number(),
   updatedAt: z.string(),
-})
+}) satisfies z.ZodType<TrafficRecord>
 
 export const trafficRecordPageSchema = z.object({
   items: z.array(trafficRecordSchema),
   total: z.number(),
   limit: z.number(),
   offset: z.number(),
-})
+}) satisfies z.ZodType<TrafficRecordPage>
 
 export const referenceSchema = z.object({
   countries: z.array(

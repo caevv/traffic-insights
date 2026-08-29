@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseMutationResult,
-} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createRecord,
   deleteRecord,
@@ -15,7 +10,7 @@ import {
   fetchSummary,
   updateRecord,
 } from './trafficApi'
-import type { DashboardFilters, RecordDraft, TrafficRecord } from '../types'
+import type { DashboardFilters, RecordDraft } from '../types'
 
 /**
  * Query keys come from one factory, not written inline.
@@ -42,9 +37,13 @@ const trafficKeys = {
 }
 
 /**
- * Reference data basically never changes, so treat it as fixed for the
- * session. Otherwise we'd refetch the country list every time the window gets
- * focus, for nothing.
+ * The dimension lists never change, so this is fixed for the session and won't
+ * refetch on focus or remount.
+ *
+ * It does still refetch after a write, because its key sits under the
+ * `traffic` prefix that mutations invalidate. That's wanted, not an oversight:
+ * the payload also carries the date range of the data, and adding a record
+ * outside the current range moves it.
  */
 export function useReference() {
   return useQuery({
@@ -89,16 +88,6 @@ export function useTrafficRecords(filters: DashboardFilters, limit: number) {
   })
 }
 
-export type RecordMutations = {
-  create: UseMutationResult<TrafficRecord, Error, RecordDraft>
-  update: UseMutationResult<
-    TrafficRecord,
-    Error,
-    { id: number; patch: Partial<RecordDraft> }
-  >
-  remove: UseMutationResult<void, Error, number>
-}
-
 /**
  * A write invalidates every `traffic` key.
  *
@@ -108,7 +97,7 @@ export type RecordMutations = {
  * the others. Invalidating everything keeps the dashboard consistent, which is
  * what matters here.
  */
-export function useRecordMutations(): RecordMutations {
+export function useRecordMutations() {
   const queryClient = useQueryClient()
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: trafficKeys.all })

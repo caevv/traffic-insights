@@ -17,6 +17,7 @@ import {
   formatSpeed,
 } from '@/shared/lib/format'
 import { TooltipShell } from './TooltipShell'
+import { tooltipDatum, type RechartsTooltipProps } from '../lib/tooltip'
 import type { HourlyTraffic } from '../types'
 
 const CHART_HEIGHT = 300
@@ -27,14 +28,9 @@ const PEAK_WINDOWS = [
   { id: 'evening', from: 16, to: 19, label: 'Evening peak' },
 ] as const
 
-type HourlyTooltipProps = {
-  active?: boolean
-  payload?: { payload: HourlyTraffic }[]
-}
-
-function HourlyTooltip({ active, payload }: HourlyTooltipProps) {
-  const datum = payload?.[0]?.payload
-  if (!active || !datum) return null
+function HourlyTooltip(props: RechartsTooltipProps<HourlyTraffic>) {
+  const datum = tooltipDatum(props)
+  if (!datum) return null
 
   return (
     <TooltipShell

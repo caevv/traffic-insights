@@ -6,8 +6,14 @@
  * from the CLI and from tests, with no request object needed.
  */
 
+/** Every code a client can receive. The handler in app.ts emits all of these. */
 export type ErrorCode =
-  'BAD_REQUEST' | 'NOT_FOUND' | 'CONFLICT' | 'UNPROCESSABLE' | 'INTERNAL'
+  | 'BAD_REQUEST'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'UNPROCESSABLE'
+  | 'RATE_LIMITED'
+  | 'INTERNAL'
 
 export class AppError extends Error {
   readonly code: ErrorCode

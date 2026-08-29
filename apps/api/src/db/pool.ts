@@ -1,18 +1,10 @@
 import pg from 'pg'
 import { env } from '../config/env.ts'
+import { registerTypeParsers } from './typeParsers.ts'
 
-const { Pool, types } = pg
+const { Pool } = pg
 
-// pg returns bigint and numeric as strings, because they can be bigger than a
-// JS number can hold. Our sums are daily vehicle counts, nowhere near that
-// limit, so we parse them here. Otherwise SUM() comes back as "48213" and the
-// charts get a string where they want a number.
-types.setTypeParser(types.builtins.INT8, (value) => Number.parseInt(value, 10))
-types.setTypeParser(types.builtins.NUMERIC, (value) => Number.parseFloat(value))
-
-// DATE would be parsed into a JS Date, which shifts the day if the process
-// runs outside UTC. A calendar date has no timezone, so keep the string.
-types.setTypeParser(types.builtins.DATE, (value) => value)
+registerTypeParsers()
 
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,

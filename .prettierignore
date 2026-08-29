@@ -3,3 +3,9 @@ node_modules
 package-lock.json
 coverage
 CHANGELOG.md
+
+# Hidden directories are editor and machine-local state, not project files.
+# .github is ours, so it stays in.
+.*/
+!.github/
+!.github/**

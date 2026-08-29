@@ -26,8 +26,15 @@ function startOfHour(epochMs: number): string {
   return new Date(Math.floor(epochMs / HOUR_MS) * HOUR_MS).toISOString()
 }
 
-/** Build the query string that every aggregate endpoint uses. */
-export function toQuery(filters: DashboardFilters): string {
+/**
+ * Build the query parameters every aggregate endpoint takes.
+ *
+ * Returns URLSearchParams rather than a finished string, so a caller that
+ * needs one more parameter can just .set() it. Returning a pre-joined "?a=b"
+ * meant fetchRecords had to decide between "?" and "&" itself, which is
+ * query-string assembly done a second time in a worse place.
+ */
+export function toQuery(filters: DashboardFilters): URLSearchParams {
   const params = new URLSearchParams()
 
   if (filters.rangeDays !== null) {
@@ -43,66 +50,81 @@ export function toQuery(filters: DashboardFilters): string {
     params.set('vehicleTypes', filters.vehicleTypes.join(','))
   }
 
+  return params
+}
+
+function withQuery(path: string, params: URLSearchParams): string {
   const query = params.toString()
-  return query ? `?${query}` : ''
+  return query ? `${path}?${query}` : path
+}
+
+/** Every aggregate is the same request with a different path and result type. */
+function getAggregate<T>(
+  path: string,
+  filters: DashboardFilters,
+  signal?: AbortSignal,
+): Promise<T> {
+  return apiRequest<T>(withQuery(path, toQuery(filters)), { signal })
 }
 
 export const fetchReference = (signal?: AbortSignal) =>
-  apiRequest<Reference>('/reference', signal ? { signal } : undefined)
+  apiRequest<Reference>('/reference', { signal })
 
 export const fetchSummary = (filters: DashboardFilters, signal?: AbortSignal) =>
-  apiRequest<TrafficSummary>(
-    `/traffic/summary${toQuery(filters)}`,
-    signal ? { signal } : undefined,
-  )
+  getAggregate<TrafficSummary>('/traffic/summary', filters, signal)
 
 export const fetchByCountry = (
   filters: DashboardFilters,
   signal?: AbortSignal,
-) =>
-  apiRequest<CountryTraffic[]>(
-    `/traffic/by-country${toQuery(filters)}`,
-    signal ? { signal } : undefined,
-  )
+) => getAggregate<CountryTraffic[]>('/traffic/by-country', filters, signal)
 
 export const fetchByVehicleType = (
   filters: DashboardFilters,
   signal?: AbortSignal,
 ) =>
-  apiRequest<VehicleTypeTraffic[]>(
-    `/traffic/by-vehicle-type${toQuery(filters)}`,
-    signal ? { signal } : undefined,
+  getAggregate<VehicleTypeTraffic[]>(
+    '/traffic/by-vehicle-type',
+    filters,
+    signal,
   )
 
 export const fetchByHour = (filters: DashboardFilters, signal?: AbortSignal) =>
-  apiRequest<HourlyTraffic[]>(
-    `/traffic/by-hour${toQuery(filters)}`,
-    signal ? { signal } : undefined,
-  )
+  getAggregate<HourlyTraffic[]>('/traffic/by-hour', filters, signal)
 
 export function fetchRecords(
   filters: DashboardFilters,
   limit: number,
   signal?: AbortSignal,
 ) {
-  const query = toQuery(filters)
-  const separator = query ? '&' : '?'
-  return apiRequest<TrafficRecordPage>(
-    `/traffic/records${query}${separator}limit=${limit}`,
-    signal ? { signal } : undefined,
-  )
+  const params = toQuery(filters)
+  params.set('limit', String(limit))
+  return apiRequest<TrafficRecordPage>(withQuery('/traffic/records', params), {
+    signal,
+  })
 }
 
+/**
+ * The API stores hourly instants in UTC, and `datetime-local` hands us a plain
+ * local string with no zone on it. The conversion belongs here, not in the
+ * form: this module already owns the wire format for every read.
+ */
 export const createRecord = (draft: RecordDraft) =>
   apiRequest<TrafficRecord>('/traffic/records', {
     method: 'POST',
-    body: JSON.stringify(draft),
+    body: JSON.stringify({
+      ...draft,
+      recordedAt: new Date(draft.recordedAt).toISOString(),
+    }),
   })
 
 export const updateRecord = (id: number, patch: Partial<RecordDraft>) =>
   apiRequest<TrafficRecord>(`/traffic/records/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify(patch),
+    body: JSON.stringify(
+      patch.recordedAt === undefined
+        ? patch
+        : { ...patch, recordedAt: new Date(patch.recordedAt).toISOString() },
+    ),
   })
 
 export const deleteRecord = (id: number) =>

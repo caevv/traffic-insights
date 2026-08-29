@@ -13,7 +13,6 @@ export type SeedOptions = {
 
 export type SeedResult = {
   inserted: number
-  total: number
 }
 
 /**
@@ -35,13 +34,12 @@ export async function seed(db: Db, options: SeedOptions): Promise<SeedResult> {
     }
 
     const result = await client.query(sql, [options.days])
-    const { rows } = await client.query<{ total: number }>(
-      'SELECT count(*)::bigint AS total FROM traffic_records',
-    )
 
     await client.query('COMMIT')
 
-    return { inserted: result.rowCount ?? 0, total: rows[0]?.total ?? 0 }
+    // Only the insert count. A `SELECT count(*)` here would scan all ~207k
+    // rows on every bootstrap to produce a number nothing but a log line reads.
+    return { inserted: result.rowCount ?? 0 }
   } catch (error) {
     await client.query('ROLLBACK')
     throw error

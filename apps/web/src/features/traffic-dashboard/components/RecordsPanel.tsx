@@ -1,7 +1,7 @@
 import { useState, type SubmitEvent } from 'react'
 import { Button } from '@/shared/components/Button'
 import { formatNumber, formatSpeed, formatTimestamp } from '@/shared/lib/format'
-import type { RecordMutations } from '../api/queries'
+import { useRecordMutations } from '../api/queries'
 import type { Reference, TrafficRecord } from '../types'
 import './RecordsPanel.css'
 
@@ -19,7 +19,6 @@ type RecordsPanelProps = {
   records: TrafficRecord[]
   total: number
   reference: Reference
-  mutations: RecordMutations
 }
 
 /**
@@ -33,26 +32,33 @@ type RecordsPanelProps = {
  * Only vehicleCount can be edited inline. It's the number that visibly moves
  * every chart, so you can see the invalidation happen. The rest of a record is
  * its identity, and editing that in place runs into the natural key.
+ *
+ * The mutations hook is called here rather than passed down. This is its only
+ * consumer, and keeping it here means a pending write re-renders the panel
+ * instead of the whole dashboard and all five charts.
  */
-export function RecordsPanel({
-  records,
-  total,
-  reference,
-  mutations,
-}: RecordsPanelProps) {
+export function RecordsPanel({ records, total, reference }: RecordsPanelProps) {
+  const mutations = useRecordMutations()
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editValue, setEditValue] = useState('')
 
-  const firstCountry = reference.countries[0]?.code ?? 'DE'
-  const firstVehicle = reference.vehicleTypes[0]?.code ?? 'car'
-
-  const [draft, setDraft] = useState({
-    country: firstCountry,
-    vehicleType: firstVehicle,
+  // Lazy: currentHourLocalInput() and the two lookups only matter on mount,
+  // but the plain form would re-run them on every keystroke in the form.
+  const [draft, setDraft] = useState(() => ({
+    country: reference.countries[0]?.code ?? 'DE',
+    vehicleType: reference.vehicleTypes[0]?.code ?? 'car',
     recordedAt: currentHourLocalInput(),
     vehicleCount: '1200',
     avgSpeedKph: '64',
-  })
+  }))
+
+  // All five inputs update one key of the same object, so they share one
+  // handler factory rather than five copies of the same closure.
+  const setField =
+    (key: keyof typeof draft) => (event: { target: { value: string } }) => {
+      const { value } = event.target
+      setDraft((current) => ({ ...current, [key]: value }))
+    }
 
   const pendingError =
     mutations.create.error ?? mutations.update.error ?? mutations.remove.error
@@ -63,11 +69,9 @@ export function RecordsPanel({
       {
         country: draft.country,
         vehicleType: draft.vehicleType,
-        // datetime-local gives a plain local string. new Date reads it in the
-        // browser's zone and toISOString turns it into the UTC time the API
-        // stores. Sending the raw string would shift every record by the
-        // user's UTC offset.
-        recordedAt: new Date(draft.recordedAt).toISOString(),
+        // Handed over as the local string the input produced. trafficApi turns
+        // it into the UTC instant the API stores.
+        recordedAt: draft.recordedAt,
         vehicleCount: Number(draft.vehicleCount),
         avgSpeedKph: Number(draft.avgSpeedKph),
       },
@@ -93,15 +97,7 @@ export function RecordsPanel({
       <form className="records__form" onSubmit={handleCreate}>
         <label className="records__field">
           <span>Country</span>
-          <select
-            value={draft.country}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                country: event.target.value,
-              }))
-            }
-          >
+          <select value={draft.country} onChange={setField('country')}>
             {reference.countries.map((country) => (
               <option key={country.code} value={country.code}>
                 {country.name}
@@ -112,15 +108,7 @@ export function RecordsPanel({
 
         <label className="records__field">
           <span>Vehicle type</span>
-          <select
-            value={draft.vehicleType}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                vehicleType: event.target.value,
-              }))
-            }
-          >
+          <select value={draft.vehicleType} onChange={setField('vehicleType')}>
             {reference.vehicleTypes.map((type) => (
               <option key={type.code} value={type.code}>
                 {type.label}
@@ -134,12 +122,7 @@ export function RecordsPanel({
           <input
             type="datetime-local"
             value={draft.recordedAt}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                recordedAt: event.target.value,
-              }))
-            }
+            onChange={setField('recordedAt')}
             required
           />
         </label>
@@ -151,12 +134,7 @@ export function RecordsPanel({
             min={0}
             step={1}
             value={draft.vehicleCount}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                vehicleCount: event.target.value,
-              }))
-            }
+            onChange={setField('vehicleCount')}
             required
           />
         </label>
@@ -169,12 +147,7 @@ export function RecordsPanel({
             max={300}
             step="0.1"
             value={draft.avgSpeedKph}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                avgSpeedKph: event.target.value,
-              }))
-            }
+            onChange={setField('avgSpeedKph')}
             required
           />
         </label>

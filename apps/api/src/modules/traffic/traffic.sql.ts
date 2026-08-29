@@ -65,6 +65,16 @@ export function buildTrafficFilter(
 }
 
 /**
+ * How Postgres should render a timestamp for the wire.
+ *
+ * Every timestamp the API emits goes through this, so the JSON is identical
+ * whatever TZ the container has. It lives here rather than in one repository
+ * because both the traffic and reference queries need it, and two copies of a
+ * format string is two chances to drift.
+ */
+export const ISO_UTC = `'YYYY-MM-DD"T"HH24:MI:SS"Z"'`
+
+/**
  * Mean speed, weighted by volume.
  *
  * A plain AVG(avg_speed_kph) would be wrong. It counts an hour with 3 bicycles

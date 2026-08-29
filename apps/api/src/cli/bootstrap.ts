@@ -28,9 +28,9 @@ async function main(): Promise<void> {
 
   console.log(`Empty database. Seeding ${env.SEED_DAYS} day(s) of traffic...`)
   const startedAt = performance.now()
-  const { total } = await seed(pool, { days: env.SEED_DAYS })
+  const { inserted } = await seed(pool, { days: env.SEED_DAYS })
   console.log(
-    `Seeded ${total.toLocaleString('en-US')} row(s) in ${Math.round(
+    `Seeded ${inserted.toLocaleString('en-US')} row(s) in ${Math.round(
       performance.now() - startedAt,
     )}ms.`,
   )

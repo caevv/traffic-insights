@@ -22,6 +22,16 @@ import { trafficRoutes } from './modules/traffic/traffic.routes.ts'
 
 export const API_PREFIX = '/api/v1'
 
+declare module 'fastify' {
+  interface FastifyContextConfig {
+    /**
+     * Seconds this route may be cached by a shared cache. Omit it and the
+     * route is `no-store`.
+     */
+    cacheSeconds?: number
+  }
+}
+
 /** Pull a statusCode off an unknown thrown value without trusting its type. */
 function httpStatusOf(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null) return undefined
@@ -76,6 +86,23 @@ export async function buildApp(
   // Zod does both directions: checking requests and serialising responses.
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
+
+  // ---------------------------------------------------------------------------
+  // Cache-Control, in one place.
+  //
+  // Every response is `no-store` unless the route opts in with
+  // `config: { cacheSeconds: n }`. Doing this per handler meant the policy was
+  // written out at a dozen call sites, and a route added later would simply
+  // have no Cache-Control at all, which lets a proxy invent its own freshness.
+  // A default you have to opt out of is the safe direction for that mistake.
+  // ---------------------------------------------------------------------------
+  app.addHook('onRequest', async (request, reply) => {
+    const seconds = request.routeOptions.config.cacheSeconds
+    reply.header(
+      'Cache-Control',
+      seconds && seconds > 0 ? `public, max-age=${seconds}` : 'no-store',
+    )
+  })
 
   await app.register(databasePlugin, {
     db: options.db,

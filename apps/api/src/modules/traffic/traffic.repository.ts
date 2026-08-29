@@ -6,14 +6,14 @@ import {
   PG_UNIQUE_VIOLATION,
   UnprocessableError,
 } from '../../lib/errors.ts'
-import { buildTrafficFilter, WEIGHTED_SPEED } from './traffic.sql.ts'
+import { buildTrafficFilter, ISO_UTC, WEIGHTED_SPEED } from './traffic.sql.ts'
 import type {
   CountryTraffic,
   HourlyTraffic,
-  Page,
   TrafficFilter,
   TrafficRecord,
   TrafficRecordInput,
+  TrafficRecordPage,
   TrafficRecordPatch,
   TrafficSummary,
   VehicleTypeTraffic,
@@ -29,8 +29,6 @@ import type {
  * Timestamps use to_char(... AT TIME ZONE 'UTC', ...) so Postgres writes the
  * ISO string itself and the JSON is the same whatever TZ the container has.
  */
-
-const ISO_UTC = `'YYYY-MM-DD"T"HH24:MI:SS"Z"'`
 
 // ---------------------------------------------------------------------------
 // Aggregates
@@ -205,7 +203,7 @@ export async function listTrafficRecords(
   db: Db,
   filter: TrafficFilter,
   page: { limit: number; offset: number },
-): Promise<Page<TrafficRecord>> {
+): Promise<TrafficRecordPage> {
   const { clause, values, nextIndex } = buildTrafficFilter(filter)
 
   // COUNT(*) OVER () gets the full total from the same scan, so no second

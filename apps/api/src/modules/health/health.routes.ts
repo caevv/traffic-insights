@@ -27,13 +27,10 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
         },
       },
     },
-    async (_request, reply) => {
-      reply.header('Cache-Control', 'no-store')
-      return {
-        status: 'ok' as const,
-        uptimeSeconds: Math.round(process.uptime()),
-      }
-    },
+    async () => ({
+      status: 'ok' as const,
+      uptimeSeconds: Math.round(process.uptime()),
+    }),
   )
 
   app.get(
@@ -57,7 +54,6 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (_request, reply) => {
-      reply.header('Cache-Control', 'no-store')
       const startedAt = performance.now()
 
       try {

@@ -1,5 +1,4 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
-import type { FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { env } from '../../config/env.ts'
 import * as repo from './traffic.repository.ts'
@@ -8,7 +7,6 @@ import {
   createRecordSchema,
   errorSchema,
   hourlyTrafficSchema,
-  paginationSchema,
   recordListQuerySchema,
   recordParamsSchema,
   trafficFilterSchema,
@@ -18,51 +16,28 @@ import {
   updateRecordSchema,
   vehicleTypeTrafficSchema,
 } from './traffic.schemas.ts'
-import type { TrafficFilter } from './traffic.types.ts'
-
-/**
- * The aggregates only depend on the query string, so they're safe to cache. A
- * shared max-age lets a CDN or proxy soak up the repeated dashboard polls that
- * make up most of this traffic. It's the biggest single win going from 5 to 50
- * RPS.
- *
- * One thing worth being clear about: the ETag saves BANDWIDTH, not database
- * work. @fastify/etag hashes the serialised body in an onSend hook, so a
- * revalidation still runs the handler and still runs the query. It just skips
- * sending the body. The benchmark shows this plainly, a 304 is no cheaper for
- * us than a 200. What actually removes load is max-age, because the client
- * doesn't send the request at all.
- */
-function setAggregateCacheHeaders(reply: FastifyReply): void {
-  reply.header(
-    'Cache-Control',
-    env.AGGREGATE_CACHE_MAX_AGE > 0
-      ? `public, max-age=${env.AGGREGATE_CACHE_MAX_AGE}`
-      : 'no-store',
-  )
-}
-
-/** A write changes every aggregate, so never let its response be cached. */
-function setNoStore(reply: FastifyReply): void {
-  reply.header('Cache-Control', 'no-store')
-}
-
-type FilterQuery = z.infer<typeof trafficFilterSchema>
-
-function toFilter(query: FilterQuery): TrafficFilter {
-  return {
-    ...(query.from ? { from: query.from } : {}),
-    ...(query.to ? { to: query.to } : {}),
-    ...(query.countries ? { countries: query.countries } : {}),
-    ...(query.vehicleTypes ? { vehicleTypes: query.vehicleTypes } : {}),
-  }
-}
 
 export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
   const errorResponses = {
     400: errorSchema,
     422: errorSchema,
   }
+
+  /**
+   * The aggregates are pure functions of the query string, so they are safe for
+   * a shared cache to hold. That is what lets a CDN or proxy absorb the
+   * repeated dashboard polls that make up most of this traffic, and it is the
+   * biggest single win going from 5 to 50 RPS.
+   *
+   * Worth being clear that the ETag is a different thing: it saves BANDWIDTH,
+   * not database work. @fastify/etag hashes the serialised body in an onSend
+   * hook, so a revalidation still runs the handler and still runs the query. It
+   * just skips sending the body. What removes load is max-age, because then the
+   * client sends no request at all.
+   *
+   * Everything not listed here is `no-store` by default. See the hook in app.ts.
+   */
+  const cacheable = { cacheSeconds: env.AGGREGATE_CACHE_MAX_AGE }
 
   // -------------------------------------------------------------------------
   // Aggregates (read-only)
@@ -71,6 +46,7 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/traffic/summary',
     {
+      config: cacheable,
       schema: {
         tags: ['traffic'],
         summary: 'Headline totals for the current filter',
@@ -78,15 +54,15 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: trafficSummarySchema, ...errorResponses },
       },
     },
-    async (request, reply) => {
-      setAggregateCacheHeaders(reply)
-      return repo.getTrafficSummary(app.db, toFilter(request.query))
+    async (request) => {
+      return repo.getTrafficSummary(app.db, request.query)
     },
   )
 
   app.get(
     '/traffic/by-country',
     {
+      config: cacheable,
       schema: {
         tags: ['traffic'],
         summary: 'Country-wise traffic volume',
@@ -97,15 +73,15 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: z.array(countryTrafficSchema), ...errorResponses },
       },
     },
-    async (request, reply) => {
-      setAggregateCacheHeaders(reply)
-      return repo.getTrafficByCountry(app.db, toFilter(request.query))
+    async (request) => {
+      return repo.getTrafficByCountry(app.db, request.query)
     },
   )
 
   app.get(
     '/traffic/by-vehicle-type',
     {
+      config: cacheable,
       schema: {
         tags: ['traffic'],
         summary: 'Vehicle type distribution',
@@ -116,15 +92,15 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: z.array(vehicleTypeTrafficSchema), ...errorResponses },
       },
     },
-    async (request, reply) => {
-      setAggregateCacheHeaders(reply)
-      return repo.getTrafficByVehicleType(app.db, toFilter(request.query))
+    async (request) => {
+      return repo.getTrafficByVehicleType(app.db, request.query)
     },
   )
 
   app.get(
     '/traffic/by-hour',
     {
+      config: cacheable,
       schema: {
         tags: ['traffic'],
         summary: 'Traffic rhythm by local hour of day',
@@ -135,9 +111,8 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: z.array(hourlyTrafficSchema), ...errorResponses },
       },
     },
-    async (request, reply) => {
-      setAggregateCacheHeaders(reply)
-      return repo.getTrafficByHour(app.db, toFilter(request.query))
+    async (request) => {
+      return repo.getTrafficByHour(app.db, request.query)
     },
   )
 
@@ -148,6 +123,7 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/traffic/records',
     {
+      config: cacheable,
       schema: {
         tags: ['records'],
         summary: 'List raw traffic records',
@@ -155,13 +131,9 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: trafficRecordPageSchema, ...errorResponses },
       },
     },
-    async (request, reply) => {
-      setAggregateCacheHeaders(reply)
-      const { limit, offset } = paginationSchema.parse(request.query)
-      return repo.listTrafficRecords(app.db, toFilter(request.query), {
-        limit,
-        offset,
-      })
+    async (request) => {
+      const { limit, offset } = request.query
+      return repo.listTrafficRecords(app.db, request.query, { limit, offset })
     },
   )
 
@@ -185,7 +157,6 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const record = await repo.createTrafficRecord(app.db, request.body)
-      setNoStore(reply)
       reply.status(201).header('Location', `${request.url}/${record.id}`)
       return record
     },
@@ -201,8 +172,7 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: trafficRecordSchema, 404: errorSchema },
       },
     },
-    async (request, reply) => {
-      setAggregateCacheHeaders(reply)
+    async (request) => {
       return repo.getTrafficRecord(app.db, request.params.id)
     },
   )
@@ -223,8 +193,7 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
         },
       },
     },
-    async (request, reply) => {
-      setNoStore(reply)
+    async (request) => {
       return repo.updateTrafficRecord(app.db, request.params.id, request.body)
     },
   )
@@ -241,7 +210,6 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       await repo.deleteTrafficRecord(app.db, request.params.id)
-      setNoStore(reply)
       reply.status(204)
       return null
     },

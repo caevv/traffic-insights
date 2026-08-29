@@ -54,8 +54,19 @@ const BASE_URL = parseUrl()
 const DURATION = parseFlag('duration', 10)
 const CONNECTION_LEVELS = [10, 50, 100]
 
+/** Thirty days back, rounded to the hour, same as the dashboard sends. */
+function thirtyDaysAgo(): string {
+  const hour = 60 * 60 * 1000
+  return new Date(
+    Math.floor((Date.now() - 30 * 24 * hour) / hour) * hour,
+  ).toISOString()
+}
+
 const SCENARIOS: Scenario[] = [
-  { name: 'by-country (30d)', path: '/api/v1/traffic/by-country?from=' },
+  {
+    name: 'by-country (30d)',
+    path: `/api/v1/traffic/by-country?from=${encodeURIComponent(thirtyDaysAgo())}`,
+  },
   { name: 'by-country (all)', path: '/api/v1/traffic/by-country' },
   { name: 'by-vehicle-type', path: '/api/v1/traffic/by-vehicle-type' },
   // The one aggregate that can't use the covering indexes, because it needs
@@ -65,21 +76,9 @@ const SCENARIOS: Scenario[] = [
   { name: 'records (50)', path: '/api/v1/traffic/records?limit=50' },
 ]
 
-/** Thirty days back, rounded to the hour, same as the dashboard sends. */
-function thirtyDaysAgo(): string {
-  const hour = 60 * 60 * 1000
-  return new Date(
-    Math.floor((Date.now() - 30 * 24 * hour) / hour) * hour,
-  ).toISOString()
-}
-
 async function run(scenario: Scenario, connections: number): Promise<Row> {
-  const path = scenario.path.endsWith('from=')
-    ? scenario.path + encodeURIComponent(thirtyDaysAgo())
-    : scenario.path
-
   const result = await autocannon({
-    url: `${BASE_URL}${path}`,
+    url: `${BASE_URL}${scenario.path}`,
     connections,
     duration: DURATION,
     ...(scenario.etag ? { headers: { 'if-none-match': scenario.etag } } : {}),

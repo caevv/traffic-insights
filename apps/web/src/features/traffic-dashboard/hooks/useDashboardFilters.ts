@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { DashboardFilters } from '../types'
 
 export const RANGE_OPTIONS = [
@@ -71,15 +71,15 @@ export function useDashboardFilters(): DashboardFilterControls {
     filters.vehicleTypes.length > 0 ||
     filters.rangeDays !== INITIAL_FILTERS.rangeDays
 
-  return useMemo(
-    () => ({
-      filters,
-      isFiltered,
-      setRange,
-      toggleCountry,
-      toggleVehicleType,
-      reset,
-    }),
-    [filters, isFiltered, setRange, toggleCountry, toggleVehicleType, reset],
-  )
+  // Not memoised. The only caller destructures this straight away, so the
+  // object's identity is never compared to anything. What does need a stable
+  // identity is each updater, and those are useCallback'd above.
+  return {
+    filters,
+    isFiltered,
+    setRange,
+    toggleCountry,
+    toggleVehicleType,
+    reset,
+  }
 }

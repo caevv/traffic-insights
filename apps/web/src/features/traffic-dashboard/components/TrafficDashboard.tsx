@@ -4,7 +4,6 @@ import { QueryState } from '@/shared/components/QueryState'
 import { formatCompact, formatTimestamp } from '@/shared/lib/format'
 import {
   useReference,
-  useRecordMutations,
   useSummary,
   useTrafficByCountry,
   useTrafficByHour,
@@ -49,7 +48,6 @@ export function TrafficDashboard() {
   const byVehicleType = useTrafficByVehicleType(deferredFilters)
   const byHour = useTrafficByHour(deferredFilters)
   const records = useTrafficRecords(deferredFilters, RECORD_ROWS)
-  const mutations = useRecordMutations()
 
   if (reference.isPending || reference.isError || !reference.data) {
     return (
@@ -183,7 +181,6 @@ export function TrafficDashboard() {
               records={records.data.items}
               total={records.data.total}
               reference={reference.data}
-              mutations={mutations}
             />
           ) : null}
         </QueryState>

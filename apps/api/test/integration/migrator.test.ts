@@ -3,7 +3,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { migrate } from '../../src/db/migrator.ts'
-import { createTestDatabase, type TestDatabase } from '../helpers/database.ts'
+import {
+  createTestDatabase,
+  insertRecord,
+  type TestDatabase,
+} from '../helpers/database.ts'
 import { seedFixtures } from '../helpers/fixtures.ts'
 import { isEmpty, seed } from '../../src/db/seed.ts'
 
@@ -58,38 +62,38 @@ describe('migrator', () => {
     // A duplicate (country, vehicle type, hour) has to be impossible in the
     // DATABASE, not just discouraged in app code.
     await expect(
-      db.pool.query(
-        `INSERT INTO traffic_records
-           (country_id, vehicle_type_id, recorded_at, vehicle_count, avg_speed_kph)
-         SELECT c.id, v.id, '2024-01-15T08:00:00Z', 1, 10
-         FROM countries c, vehicle_types v
-         WHERE c.iso_code = 'DE' AND v.code = 'car'`,
-      ),
+      insertRecord(db.pool, {
+        country: 'DE',
+        vehicleType: 'car',
+        recordedAt: '2024-01-15T08:00:00Z',
+        vehicleCount: 1,
+        avgSpeedKph: 10,
+      }),
     ).rejects.toMatchObject({ code: '23505' })
   })
 
   it('rejects a timestamp that is not on the hour', async () => {
     await expect(
-      db.pool.query(
-        `INSERT INTO traffic_records
-           (country_id, vehicle_type_id, recorded_at, vehicle_count, avg_speed_kph)
-         SELECT c.id, v.id, '2024-05-01T08:30:00Z', 1, 10
-         FROM countries c, vehicle_types v
-         WHERE c.iso_code = 'DE' AND v.code = 'car'`,
-      ),
-      // CHECK violation. The data is hourly.
+      // CHECK violation. The data is hourly, so 08:30 is not a valid instant.
+      insertRecord(db.pool, {
+        country: 'DE',
+        vehicleType: 'car',
+        recordedAt: '2024-05-01T08:30:00Z',
+        vehicleCount: 1,
+        avgSpeedKph: 10,
+      }),
     ).rejects.toMatchObject({ code: '23514' })
   })
 
   it('rejects an implausible speed', async () => {
     await expect(
-      db.pool.query(
-        `INSERT INTO traffic_records
-           (country_id, vehicle_type_id, recorded_at, vehicle_count, avg_speed_kph)
-         SELECT c.id, v.id, '2024-05-02T08:00:00Z', 1, 999
-         FROM countries c, vehicle_types v
-         WHERE c.iso_code = 'DE' AND v.code = 'car'`,
-      ),
+      insertRecord(db.pool, {
+        country: 'DE',
+        vehicleType: 'car',
+        recordedAt: '2024-05-02T08:00:00Z',
+        vehicleCount: 1,
+        avgSpeedKph: 999,
+      }),
     ).rejects.toMatchObject({ code: '23514' })
   })
 })
@@ -116,14 +120,19 @@ describe('seed', () => {
     // and 1.12, so a short window leaves few samples per hour bucket and the
     // two shape assertions below get flaky. A week is still ~16k rows and
     // under a second, and it gives the noise enough rows to average out.
-    const { inserted, total } = await seed(db.pool, { days: SEED_DAYS })
+    const { inserted } = await seed(db.pool, { days: SEED_DAYS })
 
     // 16 countries x 6 vehicle types x (7 x 24 + 1) hours. The series
     // includes both ends.
     const expectedRows = 16 * 6 * (SEED_DAYS * 24 + 1)
     expect(inserted).toBe(expectedRows)
-    expect(total).toBe(expectedRows)
     expect(await isEmpty(db.pool)).toBe(false)
+
+    // The seed reports only what it inserted, so check the stored total here.
+    const { rows } = await db.pool.query<{ total: number }>(
+      'SELECT count(*)::bigint AS total FROM traffic_records',
+    )
+    expect(rows[0]!.total).toBe(expectedRows)
   })
 
   it('inserts nothing when the same window is seeded again', async () => {

@@ -26,7 +26,7 @@ import type { DashboardFilters, RecordDraft, TrafficRecord } from '../types'
  * and the chart shows stale numbers with no error anywhere. One factory means
  * the writer and the reader cannot disagree.
  */
-export const trafficKeys = {
+const trafficKeys = {
   all: ['traffic'] as const,
   reference: () => [...trafficKeys.all, 'reference'] as const,
   summary: (filters: DashboardFilters) =>

@@ -68,7 +68,12 @@ export async function buildApp(
     // Cap the body size: the write endpoints accept a single small object, so
     // anything larger is either a bug or an attack.
     bodyLimit: 64 * 1024,
-    disableRequestLogging: env.NODE_ENV === 'production',
+    // Per-request logging stays on. It is the access log — the thing you
+    // actually want when diagnosing a production incident — and `LOG_LEVEL`
+    // already turns it off for an operator who decides the volume costs more
+    // than it is worth. (Fastify's `disableRequestLogging` option is
+    // deprecated in favour of a `logController` class; a level is a simpler
+    // knob for the same outcome.)
   }).withTypeProvider<ZodTypeProvider>()
 
   // Zod drives BOTH directions: request validation and response serialisation.

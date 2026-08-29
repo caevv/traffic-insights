@@ -139,7 +139,7 @@ export const VehicleMixChart = memo(function VehicleMixChart({
         Each row is a button, so the legend is a second, keyboard-reachable
         route to the same cross-filter the slices provide.
       */}
-      <ul className="vehicle-mix__legend">
+      <ul className="vehicle-mix__legend" aria-label="Vehicle type shares">
         {slices.map((slice) => (
           <li key={slice.vehicleType}>
             <button

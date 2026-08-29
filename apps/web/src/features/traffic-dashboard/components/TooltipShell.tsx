@@ -1,6 +1,6 @@
 import './TooltipShell.css'
 
-export type TooltipRow = {
+type TooltipRow = {
   label: string
   value: string
   color?: string

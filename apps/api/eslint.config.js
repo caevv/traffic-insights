@@ -15,6 +15,13 @@ export default defineConfig([
       ecmaVersion: 2023,
       sourceType: 'module',
       globals: globals.node,
+      // Pinned explicitly: the pre-commit hook lints files from BOTH
+      // workspaces in a single run from the repo root, and typescript-eslint
+      // cannot choose between two candidate roots on its own. Without this,
+      // every file fails to parse depending on where eslint was invoked.
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       '@typescript-eslint/no-unused-vars': 'off',

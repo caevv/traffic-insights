@@ -95,12 +95,26 @@ export async function buildApp(
   // written out at a dozen call sites, and a route added later would simply
   // have no Cache-Control at all, which lets a proxy invent its own freshness.
   // A default you have to opt out of is the safe direction for that mistake.
+  //
+  // `max-age=0, s-maxage=N` and not plain `max-age=N`, which is a real bug I
+  // shipped and then caught in the browser. The dashboard writes the data it
+  // displays. With `max-age=60` the browser served its own cached copy back to
+  // the refetch that follows a write, so you could edit a row and watch the
+  // table keep showing the old number for a minute. It looked fine in
+  // development only because AGGREGATE_CACHE_MAX_AGE is 0 there.
+  //
+  // `max-age=0` makes the browser revalidate every time, which is cheap: the
+  // ETag turns it into a 304 with no body. `s-maxage=N` still lets a CDN or
+  // reverse proxy serve the response for N seconds without touching us, which
+  // is where the actual load reduction comes from anyway.
   // ---------------------------------------------------------------------------
   app.addHook('onRequest', async (request, reply) => {
     const seconds = request.routeOptions.config.cacheSeconds
     reply.header(
       'Cache-Control',
-      seconds && seconds > 0 ? `public, max-age=${seconds}` : 'no-store',
+      seconds && seconds > 0
+        ? `public, max-age=0, s-maxage=${seconds}`
+        : 'no-store',
     )
   })
 

@@ -85,6 +85,21 @@ describe('HTTP API', () => {
       expect(response.json()).toHaveLength(2)
     })
 
+    it('lets shared caches hold it but makes the browser revalidate', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `${API_PREFIX}/traffic/by-country`,
+      })
+
+      // The dashboard writes the data it shows. A plain `max-age` lets the
+      // browser answer the post-write refetch from its own cache, so an edit
+      // appears not to happen. `max-age=0` forces revalidation (cheap, the
+      // ETag makes it a 304) while `s-maxage` still offloads a CDN.
+      expect(response.headers['cache-control']).toBe(
+        'public, max-age=0, s-maxage=60',
+      )
+    })
+
     it('sends an ETag so an unchanged aggregate costs a 304', async () => {
       const first = await app.inject({
         method: 'GET',
@@ -129,6 +144,47 @@ describe('HTTP API', () => {
           message: '`from` must be earlier than `to`',
         }),
       ])
+    })
+
+    it('rejects a timestamp in the future', async () => {
+      // The database can't enforce this: a CHECK on now() is not IMMUTABLE and
+      // would break dump/restore. The request schema is the only place it can
+      // live, so it needs a test to stay honest.
+      const response = await app.inject({
+        method: 'POST',
+        url: `${API_PREFIX}/traffic/records`,
+        payload: {
+          country: 'DE',
+          vehicleType: 'bus',
+          recordedAt: '2099-01-01T10:00:00Z',
+          vehicleCount: 10,
+          avgSpeedKph: 50,
+        },
+      })
+
+      expect(response.statusCode).toBe(400)
+      expect(response.json().error.details).toEqual([
+        expect.objectContaining({
+          message: 'recordedAt cannot be in the future',
+        }),
+      ])
+    })
+
+    it('accepts a timestamp inside the current hour', async () => {
+      // Truncation happens before the check, so "now" is always valid.
+      const response = await app.inject({
+        method: 'POST',
+        url: `${API_PREFIX}/traffic/records`,
+        payload: {
+          country: 'KE',
+          vehicleType: 'bicycle',
+          recordedAt: new Date().toISOString(),
+          vehicleCount: 3,
+          avgSpeedKph: 15,
+        },
+      })
+
+      expect(response.statusCode).toBe(201)
     })
 
     it('rejects a speed outside the plausible range before it reaches the database', async () => {

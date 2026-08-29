@@ -9,9 +9,10 @@
 process.env.NODE_ENV = 'test'
 process.env.LOG_LEVEL = 'silent'
 
-// No caching of aggregates in tests. Otherwise a test that writes a record
-// and then checks the aggregate would read the previous test's response.
-process.env.AGGREGATE_CACHE_MAX_AGE = '0'
+// Caching on, so the tests see the headers production sends. app.inject()
+// drives the server in-process and has no client cache of its own, so this
+// cannot make one test read another's response.
+process.env.AGGREGATE_CACHE_MAX_AGE = '60'
 
 // Rate limiting off. A test suite firing hundreds of requests a second is not
 // the abuse the limiter is there for.

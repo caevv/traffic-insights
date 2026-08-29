@@ -55,12 +55,26 @@ function commaSeparated<T extends z.ZodType<string, string>>(item: T) {
  * Data is hourly, so any timestamp is read as the hour it falls in. We round
  * down instead of rejecting. That matches what the data means and makes sure
  * the database CHECK can never fire.
+ *
+ * The future check lives here because it can't live in the database. A
+ * `recorded_at <= now()` CHECK would use now(), which is STABLE rather than
+ * IMMUTABLE, and a constraint built on it breaks dump and restore: rows that
+ * were fine when written fail to load back later. So this is the only place
+ * that can enforce it, and 001_initial_schema.sql says so.
+ *
+ * Checked after truncating, so a timestamp inside the current hour is fine.
  */
-const hourInstant = z.coerce.date().transform((value) => {
-  const truncated = new Date(value)
-  truncated.setUTCMinutes(0, 0, 0)
-  return truncated
-})
+const hourInstant = z.coerce
+  .date()
+  .transform((value) => {
+    const truncated = new Date(value)
+    truncated.setUTCMinutes(0, 0, 0)
+    return truncated
+  })
+  .refine(
+    (value) => value.getTime() <= Date.now(),
+    'recordedAt cannot be in the future',
+  )
 
 // ---------------------------------------------------------------------------
 // Query parameters

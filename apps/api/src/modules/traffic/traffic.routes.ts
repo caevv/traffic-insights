@@ -32,8 +32,8 @@ export const trafficRoutes: FastifyPluginAsyncZod = async (app) => {
    * Worth being clear that the ETag is a different thing: it saves BANDWIDTH,
    * not database work. @fastify/etag hashes the serialised body in an onSend
    * hook, so a revalidation still runs the handler and still runs the query. It
-   * just skips sending the body. What removes load is max-age, because then the
-   * client sends no request at all.
+   * just skips sending the body. What removes load from us is s-maxage, when a
+   * shared cache sits in front and answers without asking.
    *
    * Everything not listed here is `no-store` by default. See the hook in app.ts.
    */

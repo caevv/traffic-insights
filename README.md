@@ -24,7 +24,7 @@ as volume rises.
 You need Docker. Nothing else.
 
 ```bash
-git clone <this-repo> && cd derq
+git clone <this-repo> && cd traffic-insights
 docker compose up --build
 ```
 

@@ -45,7 +45,9 @@ describe('migrator', () => {
   })
 
   it('refuses to run when an applied migration has been edited', async () => {
-    const directory = await mkdtemp(join(tmpdir(), 'derq-migrations-'))
+    const directory = await mkdtemp(
+      join(tmpdir(), 'traffic-insights-migrations-'),
+    )
     // Same version as one already applied, but different content.
     await writeFile(
       join(directory, '001_initial_schema.sql'),

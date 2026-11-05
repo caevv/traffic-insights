@@ -11,13 +11,13 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
-RUN npm ci --workspace @derq/web --include-workspace-root --ignore-scripts
+RUN npm ci --workspace @traffic-insights/web --include-workspace-root --ignore-scripts
 
 FROM deps AS build
 COPY apps/web apps/web
 # npm run build type-checks first, so a type error fails the image build
 # instead of shipping a broken bundle.
-RUN npm run build --workspace @derq/web
+RUN npm run build --workspace @traffic-insights/web
 
 # --------------------------------------------------------------------------
 # runtime — static files behind nginx

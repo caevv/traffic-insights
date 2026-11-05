@@ -20,4 +20,4 @@ process.env.RATE_LIMIT_MAX = '1000000'
 
 process.env.DATABASE_URL ??=
   process.env.TEST_DATABASE_URL ??
-  'postgres://derq:derq_local_dev@localhost:5432/derq'
+  'postgres://traffic_insights:traffic_insights_local_dev@localhost:5432/traffic_insights'

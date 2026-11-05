@@ -7,7 +7,7 @@
 # remember: migrate waits for Postgres to be healthy, and api waits for migrate
 # to exit 0.
 
-name: derq-traffic
+name: traffic-insights
 
 services:
   # The four POSTGRES_* values below configure this container and nothing
@@ -26,12 +26,12 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-derq}
-      POSTGRES_USER: ${POSTGRES_USER:-derq}
+      POSTGRES_DB: ${POSTGRES_DB:-traffic_insights}
+      POSTGRES_USER: ${POSTGRES_USER:-traffic_insights}
       # Throwaway local default so a fresh clone works with no setup. It has
       # to match the password inside DATABASE_URL, which the API reads from
       # apps/api/.env. Change one and you have to change the other.
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-derq_local_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-traffic_insights_local_dev}
       # Fixed collation so ORDER BY on country names is the same on your
       # machine and in CI.
       POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=en-US'
@@ -53,7 +53,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'psql -U "${POSTGRES_USER:-derq}" -d "${POSTGRES_DB:-derq}" -c "SELECT 1" || exit 1',
+          'psql -U "${POSTGRES_USER:-traffic_insights}" -d "${POSTGRES_DB:-traffic_insights}" -c "SELECT 1" || exit 1',
         ]
       interval: 3s
       timeout: 5s

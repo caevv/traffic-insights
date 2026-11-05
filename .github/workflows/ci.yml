@@ -41,7 +41,7 @@ jobs:
         run: npm run typecheck
 
       - name: Knip (unused files, exports and deps)
-        run: npm run knip --workspace @derq/web
+        run: npm run knip --workspace @traffic-insights/web
 
   test-api:
     name: API tests
@@ -80,7 +80,7 @@ jobs:
         # needs to point at a server where the user can CREATE DATABASE.
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
-        run: npm run test --workspace @derq/api
+        run: npm run test --workspace @traffic-insights/api
 
   test-web:
     name: Web tests
@@ -96,10 +96,10 @@ jobs:
       - run: npm ci
 
       - name: Vitest
-        run: npm run test --workspace @derq/web
+        run: npm run test --workspace @traffic-insights/web
 
       - name: Production build
-        run: npm run build --workspace @derq/web
+        run: npm run build --workspace @traffic-insights/web
 
   docker:
     name: Docker images

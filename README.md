@@ -375,7 +375,7 @@ loaded the page from: right under the Vite dev proxy, right under nginx in
 Docker, and right in production. Writing it into a file would only repeat the
 default.
 
-The stack falls back to a throwaway local password (`derq_local_dev`) so a
+The stack falls back to a throwaway local password (`traffic_insights_local_dev`) so a
 fresh clone works with no setup. For anything that isn't your own machine,
 change it and the password inside `DATABASE_URL` together. It is one password
 seen from two sides.

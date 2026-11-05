@@ -25,14 +25,14 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
-RUN npm ci --workspace @derq/api --include-workspace-root --ignore-scripts
+RUN npm ci --workspace @traffic-insights/api --include-workspace-root --ignore-scripts
 
 # --------------------------------------------------------------------------
 # build — type-check and write dist/
 # --------------------------------------------------------------------------
 FROM deps AS build
 COPY apps/api apps/api
-RUN npm run build --workspace @derq/api
+RUN npm run build --workspace @traffic-insights/api
 
 # tsc only writes .js. The migrations and the seed are .sql files we read at
 # runtime, so they have to be copied too. Otherwise the container starts, finds
@@ -46,7 +46,7 @@ RUN cp -R apps/api/src/db/migrations apps/api/dist/db/migrations \
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
-RUN npm ci --workspace @derq/api --include-workspace-root --omit=dev --ignore-scripts \
+RUN npm ci --workspace @traffic-insights/api --include-workspace-root --omit=dev --ignore-scripts \
  && npm cache clean --force
 
 # --------------------------------------------------------------------------

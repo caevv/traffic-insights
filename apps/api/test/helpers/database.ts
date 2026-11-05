@@ -36,7 +36,7 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
 
   const suffix = randomBytes(4).toString('hex')
   const safeLabel = label.replace(/[^a-z0-9]/gi, '_').toLowerCase()
-  const name = `derq_test_${safeLabel}_${suffix}`
+  const name = `traffic_insights_test_${safeLabel}_${suffix}`
 
   const admin = new Pool({ connectionString: adminUrl, max: 1 })
   try {
